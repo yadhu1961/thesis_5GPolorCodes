@@ -41,6 +41,7 @@
     % more information on amsmath: http://www.ctan.org/get/macros/latex/required/amslatex/math/amsldoc.pdf
     \RequirePackage{psfrag}         % psfrag: http://www.ctan.org/get/macros/latex/contrib/psfrag/pfgguide.pdf
     \RequirePackage{subfigure}      % enable subfigures / Ermoeglicht Subfigures (mehrere Figures neben/untereinander)
+    \RequirePackage{titlesec}
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}
