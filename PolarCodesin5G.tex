@@ -49,26 +49,40 @@ Bhattacharyya parameter is given by
 	Z(W) \triangleq \sum_{y \in \mathcal{Y}} \sqrt{W(y|0)W(y|1)}
 \end{equation}
 
-Bhattacharyya parameter indicates how unreliable the channel is, It is easy see that $Z(W)$ takes values between $[0,1]$ better the channel smaller is $Z(W)$. Polarization creates channels with $Z(W)$ 0 or 1.
+Bhattacharyya parameter indicates how unreliable the channel is, It is easy see that $Z(W)$ takes values between $[0,1]$ better the channel smaller is $Z(W)$. Polarization creates channels with $Z(W)$ of 0 or 1.
 
 \textbf{Here Give one example channel polarization for BEC channel and show the evolution of channel reliabilities. May include a insert a picture with evolution of channel reliabilities plot.}
 
 
-\subsubsection{Encoding}
-As explained in the section \ref{CodeConstruction} code construction is done. Information bits are placed in the most reliable bit indices position non reliable bit positions are called frozen bits whose values are set to zeros. This $N$-bit vector $U$ is multiplied with generator matrix obtained by the Kronecker power of Arikan kernel matrix. Multiplying with generator matrix can also be represented as circuit form. for $n = 3$ block length $N$ becomes 8 for such a case encoding circuit looks as shown in the following figure. \newline
+\subsubsection{Encoding} \label{polarEncoding}
+As explained in the section \ref{CodeConstruction} code construction is done. Information bits are placed in the most reliable bit indices position and non reliable bit positions are called frozen bits whose values are set to zeros. This $N$-bit vector $U$ is multiplied with generator matrix obtained by the Kronecker power of Arikan kernel matrix. Multiplying with generator matrix can also be represented as circuit form. for $n = 3$ block length $N$ becomes 8 for such a case encoding circuit looks as shown in the  Figure ~\ref{fig:encoderCircuit}. \newline
 
-
-\begin{figure}[!htb]
+\begin{figure}[h]
 	\centering
-	\includegraphics[width=0.8\textwidth]{./figures/EncodingCircuit.pdf}
+	\includegraphics{./figures/ButterFlyCircuit.pdf}
+	\caption{Butterfly circuit representing Arikan Kernel matrix}
+	\label{fig:butterFlyCicuit}
+\end{figure}
+
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{./figures/EncodingCircuitStages.pdf}
 	\caption{Polar encoder in circuit form for $N = 8$}
 	\label{fig:encoderCircuit}
 \end{figure}
 
 the grayed locations are the frozen bit indices which are set to zero, in remaining positions information bits are inserted. Output of the circuit is a code word which is transmitted over the channel.
 
-Lets consider an example with $N = 8$ and $K = 4$, rate of this code is $R = K/N = 1/2$. As given in the figure frozen bit indices are ${\{0,1,2,4\}}$ remaining indices contain information bits.  Let the infomation which needs to transmitted be \{1,1,0,0\}, then after placing information bits at reliable channel positions the vector $U$ becomes \{0,0,0,1,0,1,0,0\}
+Lets consider an example with $N = 8$ and $K = 4$, rate of this code is $R = K/N = 1/2$. As given in the figure frozen bit indices are ${\{0,1,2,4\}}$ remaining indices contain information bits.  Let the infomation which needs to transmitted be \{1,1,0,0\}, then after placing information bits at reliable channel positions the vector $U$ becomes \{0,0,0,1,0,1,0,0\}. After passing through the polar encoding circuit shown in Figure ~\ref{fig:encoderCircuit}. The result of encoder are \{0,0,1,1,1,1,0,0\}. These encoded bits are transmitted over the channel.
 
+The encoding circuit is nothing but recursive application of the transformation represented by the butterfly circuit shown in the figure ~\ref{fig:butterFlyCicuit}. One butterfly unit can transform two uncorrelated bits $(a,b)$ into two correlated output bits $(a\oplus b,b)$ which is dominated by $k$ the Arikan Matrix. This corresponds to the two channel polarization. In the above example reliability of the $u_{1}$ is increased compared to the $u_{0}$ channel. This operation recursively applied to whole code word results in the circuit shown in the figure ~\ref{fig:encoderCircuit}. Code word splits into two parts in stage-1, each of which again splits into two parts in stage-2 and so on, until one reaches to single source bit $u_{i}$ in stage-1. So the process of polar encoding for $N = 8$ involves three stages of butterfly operations. Generally for a given code length $N=2^{n}$, the polar encoding consists of stages each with $N/2$ butterfly operations, which results in an encoding complexity of $O(N\log(N))$.
+
+\paragraph{}
+\textbf{If you find any interesting, useful information for better understanding of the polar encoding, don't hesitate to include here.} \newpage
+
+\subsubsection{Decoding}
+As we saw in the section ~\ref{polarEncoding}, repetitive application of butterfly operation introduces correlation between the bits. Due to
 
 
 
