@@ -87,7 +87,41 @@ As we saw in the section ~\ref{polarEncoding}, repetitive application of butterf
 To overcome this problem \cite{SCL} presents a improved version of the SC algorithm called Successive Cancellation List Decoding (SCL). The basic idea is instead of deciding a value of bit $u_{i}$ it takes both options, this results in two decoding paths for every bit, so to avoid exponential growth of complexity decoding candidates are restricted to $L$ the list size. At the end of decoding, most probable candidate is chosen from list. Performance of polar codes with SCL is still not as good as LDPC or Turbo codes at small and moderate block lengths. Polar code concatenated with CRC as outer code beats the LDPC codes of similar block length \cite{SCL}. In this section, each of the algorithms are presented briefly with an example for quick understanding.
 
 \paragraph{\emph{A. Successive Cancellation Decoding (SC)}}  \label{SC}
-The recursive SC decoder is basic algorithm presented in \cite{Arikan} for decoding polar codes.
+The recursive SC decoder is basic algorithm presented in \cite{Arikan} for decoding polar codes.  SC decoder is inherently sequential, it estimates $\hat{u_{i}}$ of $u_{i}$ by using channel observation $y^{N}_{1}$ and all the previously decoded bits $\hat{u}_{1}^{i-1}$. If $u_{i}$ is frozen bit, the decoder assigns $\hat{u_{i}}$ to known value (mostly zero). If $u_{i}$ is an information bit, the decoder waits for all the previous bits to compute the decoding metric. It may be one of three different type of metrics: \newline
+
+$\bullet$ log-likelihood ratio (LLR) where
+
+
+\begin{equation}
+L_{N}^{(i)}(y_{1}^{N},\hat{u_{1}}^{i-1}) = \ln{\Bigg(\frac{W_{N}^{(i)}(y_{1}^{N},\hat{u_{1}}^{i-1}|u_{i} = 0)} {W_{N}^{(i)}(y_{1}^{N},\hat{u_{1}^{i-1}}|u_{i} = 1)}\Bigg)};
+\end{equation}
+
+$\bullet$ likelihood ratio (LR) where 
+
+\begin{equation}
+LR_{N}^{(i)}(y_{1}^{N},\hat{u_{1}}^{i-1}) = \Bigg(\frac{W_{N}^{(i)}(y_{1}^{N},\hat{u_{1}}^{i-1}|u_{i} = 0)} {W_{N}^{(i)}(y_{1}^{N},\hat{u_{1}^{i-1}}|u_{i} = 1)}\Bigg);
+\end{equation}
+
+$\bullet$ log-likelihood (LL) where 
+
+\begin{equation}
+LL(y_{1}^{N},\hat{u_{1}}^{i-1}) = \Big[ln\Big(W_{N}^{(i)}(y_{1}^{N},\hat{u_{1}}^{i-1}|u_{i} = 0)\Big), ln\Big(W_{N}^{(i)}(y_{1}^{N},\hat{u_{1}^{i-1}}|u_{i} = 1)\Big)\Big];
+\end{equation}
+
+
+Decoding metric computed from LLR's exhibit better numerical stability than those from LR's or LL's, so we have used the LLR's metric throughout this work. There are different ways to view and understand the operation of SC decoder. In work decoding is viewed as message passing algorithm on an binary tree with $\log(N)$ levels. Decoding is performed by traversing a tree from root to leaf node. Process of decoding involves check node(CN), variable node (VN) operations and threshold detection at leaf node. Decoder receives a LLR value for every bit which needs to decoded (including both frozen and information bits), in other words for code with block length $N$ SC decoder receives $N$ LLR values. Decoding process estimates the bits $\hat{u}_{i} $  where $i = 0,1,2...,(N-1)$. The decoding tree for $N = 8$ looks as shown in the Figure ~\ref{fig:decodingTree}.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics{./figures/decodingTree.pdf}
+	\caption{Decoding tree}
+	\label{fig:decodingTree}
+\end{figure}
+
+The CN and VN operations in LLR domain are given by following equations:
+
+
+
 
 
 \paragraph{\emph{B. Improved Successive Cancellation Decoding (fast-SSC)}}  \label{fastSSC}
