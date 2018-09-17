@@ -43,6 +43,7 @@
     \RequirePackage{subfigure}      % enable subfigures / Ermoeglicht Subfigures (mehrere Figures neben/untereinander)
     \RequirePackage{titlesec}		%Yadhu added
 	\RequirePackage{varwidth}		%Yadhu added
+	\RequirePackage{svg}			%Yadhu added
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}

@@ -118,13 +118,46 @@ Decoding metric computed from LLR's exhibit better numerical stability than thos
 	\label{fig:decodingTree}
 \end{figure}
 
+\begin{figure}[h]
+	\centering
+	\includegraphics{./figures/messagePassingDiaS.pdf}
+	\caption{Local Decoder}
+	\label{fig:msgPassingDia}
+\end{figure}
+
+In a decoding  tree, the messages to left child node computed with CN and to the right with VN operation.  Figure ~\ref{fig:msgPassingDia} shows how the messages are exchanged in a local component decoder.
+
 The CN and VN operations in LLR domain are given by following equations:
 
+$\bullet$ Check Node (CN) operation
+
+\begin{equation} \label{cnop}
+	\alpha_{v_{l}}[i] = \alpha_{v}[i] + \alpha_{v}[i + N_{v}/2]
+\end{equation}
+
+$\bullet$ Variable Node (VN) operation
+
+\begin{equation} \label{vnop}
+\alpha_{v_{r}}[i] = \alpha_{v}[i + N_{v}/2] + (1 - 2\beta_{v_{l}}[i]) * \alpha_{v}[i]
+\end{equation}
+
+In Figure ~\ref{fig:msgPassingDia} and equations ~\ref{cnop}, ~\ref{vnop}  $\alpha_{v}$, $\beta_{v}$ represent intermediate LLR values and estimated bits at local decoder respectively.
 
 
+\textbf{TODO: provide an example of recoding with real LLR values for $N = 8$}
 
 
-\paragraph{\emph{B. Improved Successive Cancellation Decoding (fast-SSC)}}  \label{fastSSC}
+\paragraph{\emph{B. Improved Successive Cancellation Decoding (fast-SSC)}\newline}  \label{fastSSC} 
+In basic SC algorithm decoding is performed sequentially, previously decoded values are used for decoding the present bit. Due to sequential nature of the decoder, decoding latency in high, which is undesirable. \cite{SSC} and \cite{fastSSC} try to identify special kind of nodes in a decoder tree which can immediately decoded without traversing till the end of tree. \cite{SSC} tries to identify node with all information bits or all frozen bits. These nodes are called rate-one($R1$) and rate-zero ($R0$) nodes respectively. The $R1$ node can be decoded by taking hard decision and polar transform, since there is no extra information which can be gained from traversing the tree. Decoding of $R0$ node is not necessary since none of them are information bits, so all the bits are set known value which is known at transmitter and receiver which are mostly set to zero. \par Authors in \cite{fastSSC} extend the idea presented in \cite{SSC} by identifying two more kind of special nodes which can be decoded without traversing the tree single parity check ($SPC$) and repetition ($REP$) nodes. Both in \cite{SSC} and \cite{fastSSC} node type is identified based on the frozen pattern at the component decoder. For $SPC$ node, only one frozen bit is present at left most position. For $REP$ frozen pattern contains one information bit at right most position, remaining are frozen bits.
+
+One such example, when frozen indices for $N = 8$ are $\{0,1,3,4\}$. The full decoding tree of Figure ~\ref{fig:decodingTree} gets reduced to tree with fewer nodes as shown in Figure ~\ref{fig:decodingTreePruned}. We can easily see that in the original decoder tree number of nodes which needs to be traversed were $15$, in the pruned decoder tree number nodes is reduced to 7. which is a significant reduction computations.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics{./figures/decodingTreePruned.pdf}
+	\caption{Pruned Decoder Tree}
+	\label{fig:decodingTreePruned}
+\end{figure}
 
 
 \paragraph{\emph{C. List Decoding of Polar Codes (SCL)}}  \label{SCL}
