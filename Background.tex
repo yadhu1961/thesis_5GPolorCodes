@@ -21,7 +21,7 @@ This section introduces the basic mathematical foundations of the polar codes. I
 
 %\subsection{Polar codes definition} \label{polarCodesDefn}
 
-Mathematical foundations of polar codes lay on the polarization effect of the matrix \cite{Arikan}. $ k = \begin{smallmatrix} 1 & 0 \\ 1 & 1 \end{smallmatrix}$ also called Arikan matrix. Polar codes are $(N,K)$ linear block codes of size $N = 2^{n}$ where $n$ being a natural number. $N$ is the block length of the code and $K$ is the number of information bits.  $N$-bit vector $U$ contains $K$ information and $N-K$ frozen bits which are set to known value mostly zeros. These bits are then multiplied with the generator matrix constructed from Kronecker power of Arikan kernel matrix.
+Mathematical foundations of polar codes lay on the polarization effect of the matrix \cite{Arikan}. $ k = \big[\begin{smallmatrix} 1 & 0 \\ 1 & 1 \end{smallmatrix}$\big] also called Arikan matrix. Polar codes are $(N,K)$ linear block codes of size $N = 2^{n}$ where $n$ being a natural number. $N$ is the block length of the code and $K$ is the number of information bits.  $N$-bit vector $U$ contains $K$ information and $N-K$ frozen bits which are set to known value mostly zeros. These bits are then multiplied with the generator matrix constructed from Kronecker power of Arikan kernel matrix.
 
 For example $n=3$, block length $N$ becomes $8$ hence the generator matrix is \newline
 
@@ -77,7 +77,6 @@ the grayed locations are the frozen bit indices which are set to zero, in remain
 Lets consider an example with $N = 8$ and $K = 4$, rate of this code is $R = K/N = 1/2$. As given in the figure frozen bit indices are ${\{0,1,2,4\}}$ remaining indices contain information bits.  Let the infomation which needs to transmitted be \{1,1,0,0\}, then after placing information bits at reliable channel positions the vector $U$ becomes \{0,0,0,1,0,1,0,0\}. After passing through the polar encoding circuit shown in Figure ~\ref{fig:encoderCircuit}. The result of encoder are \{0,0,1,1,1,1,0,0\}. These encoded bits are transmitted over the channel.
 
 The encoding circuit is nothing but recursive application of the transformation represented by the butterfly circuit shown in the figure ~\ref{fig:butterFlyCicuit}. One butterfly unit can transform two uncorrelated bits $(a,b)$ into two correlated output bits $(a\oplus b,b)$ which is dominated by $k$ the Arikan Matrix. This corresponds to two channel polarization. In the above example reliability of the $u_{1}$ is increased compared to the $u_{0}$ channel. This operation recursively applied to whole code word results in the circuit shown in the figure ~\ref{fig:encoderCircuit}. Code word splits into two parts in stage-1, each of which again splits into two parts in stage-2 and so on, until one reaches to single source bit $u_{i}$ in stage-1. So the process of polar encoding for $N = 8$ involves three stages of butterfly operations. Generally for a given code length $N=2^{n}$, the polar encoding consists of stages each with $N/2$ butterfly operations, which results in an encoding complexity of $O(N\log(N))$.
-
 
 
 \textbf{If you find any interesting, useful information for better understanding of the polar encoding, don't hesitate to include here.} \newpage
@@ -141,16 +140,24 @@ $\bullet$ Variable Node (VN) operation
 \alpha_{v_{r}}[i] = \alpha_{v}[i + N_{v}/2] + (1 - 2\beta_{v_{l}}[i]) * \alpha_{v}[i]
 \end{equation}
 
-In Figure ~\ref{fig:msgPassingDia} and equations ~\ref{cnop}, ~\ref{vnop}  $\alpha_{v}$, $\beta_{v}$ represent intermediate LLR values and estimated bits at local decoder respectively.
+After decoding is done at both right and left child nodes the bits are combined at common parent node. the bit combining operation is given by the following equation.
+
+\begin{equation*} \label{bitCombination}
+\beta_{v}[i] = \begin{cases}
+				\beta_{v_{l}}[i] \oplus \beta_{v_{r}}[i] & \text{if }i < N_{v}/2 \\
+				\beta_{v_{r}}[i]
+				\end{cases}
+\end{equation*}
+
+In Figure ~\ref{fig:msgPassingDia} and in equations ~\ref{cnop}, ~\ref{vnop}  $\alpha_{v}$, $\beta_{v}$ represent intermediate LLR values and estimated bits at local decoder respectively.
 
 
 \textbf{TODO: provide an example of recoding with real LLR values for $N = 8$}
 
-
 \paragraph{\emph{B. Improved Successive Cancellation Decoding (fast-SSC)}\newline}  \label{fastSSC} 
-In basic SC algorithm decoding is performed sequentially, previously decoded values are used for decoding the present bit. Due to sequential nature of the decoder, decoding latency in high, which is undesirable. \cite{SSC} and \cite{fastSSC} try to identify special kind of nodes in a decoder tree which can immediately decoded without traversing till the end of tree. \cite{SSC} tries to identify node with all information bits or all frozen bits. These nodes are called rate-one($R1$) and rate-zero ($R0$) nodes respectively. The $R1$ node can be decoded by taking hard decision and polar transform, since there is no extra information which can be gained from traversing the tree. Decoding of $R0$ node is not necessary since none of them are information bits, so all the bits are set known value which is known at transmitter and receiver which are mostly set to zero. \par Authors in \cite{fastSSC} extend the idea presented in \cite{SSC} by identifying two more kind of special nodes which can be decoded without traversing the tree single parity check ($SPC$) and repetition ($REP$) nodes. Both in \cite{SSC} and \cite{fastSSC} node type is identified based on the frozen pattern at the component decoder. For $SPC$ node, only one frozen bit is present at left most position. For $REP$ frozen pattern contains one information bit at right most position, remaining are frozen bits.
+In basic SC algorithm decoding is performed sequentially, previously decoded values are used for decoding the present bit. Due to sequential nature of the decoder, decoding latency in high, which is undesirable. \cite{SSC} and \cite{fastSSC} try to identify special kind of nodes in a decoder tree which can immediately decoded without traversing till the end of tree. \cite{SSC} tries to identify node with all information bits or all frozen bits. These nodes are called rate-one($R1$) and rate-zero ($R0$) nodes respectively. The $R1$ node can be decoded by taking hard decision and polar transform, since there is no extra information which can be gained from traversing the tree. Decoding of $R0$ node is not necessary since none of them are information bits, so all the bits are set known value which is known at transmitter and receiver which are mostly set to zero. \par Authors in \cite{fastSSC} extend the idea presented in \cite{SSC} by identifying two more kind of special nodes which can be decoded without traversing the tree single parity check ($SPC$) and repetition ($REP$) nodes. Both in \cite{SSC} and \cite{fastSSC} node type is identified based on the frozen pattern at the component decoder. For $SPC$ node, only one frozen bit is present at left most position. For $REP$ node, frozen pattern contains one information bit at right most position, remaining are frozen bits.
 
-One such example, when frozen indices for $N = 8$ are $\{0,1,3,4\}$. The full decoding tree of Figure ~\ref{fig:decodingTree} gets reduced to tree with fewer nodes as shown in Figure ~\ref{fig:decodingTreePruned}. We can easily see that in the original decoder tree number of nodes which needs to be traversed were $15$, in the pruned decoder tree number nodes is reduced to 7. which is a significant reduction computations.
+One such example, when frozen indices for $N = 8$ are $\{0,1,3,4\}$. The full decoding tree of Figure ~\ref{fig:decodingTree} gets reduced to tree with fewer nodes as shown in Figure ~\ref{fig:decodingTreePruned}. We can easily see that, in the original decoder tree number of nodes were $15$, in the pruned tree nodes is reduced to 7, which results in a significant reduction in number of computations and decoding latency.
 
 \begin{figure}[h]
 	\centering
@@ -160,10 +167,10 @@ One such example, when frozen indices for $N = 8$ are $\{0,1,3,4\}$. The full de
 \end{figure}
 
 
-\paragraph{\emph{C. List Decoding of Polar Codes (SCL)}}  \label{SCL}
+\paragraph{\emph{C. List Decoding of Polar Codes (SCL)}\newline}  \label{SCL}
 
 
-\section{Processor architecture background}
+\section{Processor architecture background \newline}
 
 \textbf{Here I need to explain the typical features which are important for understanding the latency contributors and how they can be resolved}
 
