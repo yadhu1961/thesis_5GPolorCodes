@@ -3,45 +3,52 @@
 % In this document explain all the things which I have done until the midterm presentation.
 % All the details, Optimization techniques I have employed.
 % Following text might be useful for writing the text.
+% Also my midterm presentations/office presentations will be really useful for writing this part.  
+% Reference paper for explaining the different components of the this FEC chain "Design of Polar codes for 5G NR radio"
 
-Work I have done Until now.
+%Work I have done Until now.
+%
+%Optimizations to the original implementations until now.
+%Generic optimizations
+%- Using optimization primitives such as likely and unlikely.
+%- Aligning memory to 32 bytes so copying of data can be vectorized.
+%Polar transform optimization	
+%- Replace binary additions with xor. instead of addition and then modulus two.
+%- division and multiplications by left and right shift operations.
+%- Avoided copy operations in polarTransform operations.
+%Optimization in getting reliability indices.
+%- Avoided remove and erase operations which have huge overhead. Wrote a efficient mechanism(reduced the latency by 176 us).
+%- Instead removing and erasing I mark the element as removed.
+%- Since the reliability indexes won't change. I built a look up table in place of searching all (1024)indices reduced the latency by 40us
+%- Avoided copying operations of interleaved indexes.
+%- Unrolled the loop to reduce the jumps.
+%Rate matching optimizations.
+%- optimization in subblock interleaving, Rewrote the logic to avoid E number of division and modulus operations.
+%- Unrolled the for loops in subblock inteleaving method.
+%- Implemented optimal version of bit selection, Avoided E number of modulus operations which are very costly.
+%- Again optimization primitives for helping the branch predictor.
+%
+%
+%Fast version of Encoding API's.
+%In the original implementation of the polar encoding each of the bit is treated as 32 bit integer. This is highly inefficient
+%when the goal is to process multiple bits at time. With each bit considered as 32 bit integer SIMD instructions won't provide
+%any performance improvement. Reason is SIMD instruction can process multiple bits at time. avx2 instructions 256bits at a time.
+%if we have 32 bits to represent a single bit. we can process only 8 bits at time. Which doesn't significantly improve the
+%performance. To avoid this disadvantage and make use of SIMD capability. each 64 bit integer is considered as 64 bits of data.
+%so one avx2 instruction can process 256 data bits in a single instruction.
+%- Built a look up table to avoid last eight stages of polar encoding instead of traversing till end of tree.
+%- Implemented SIMD instruction based encoding. Encoding happens within 0.6 us for N = 512.
+%- Implemented optimal version of CRC calculation which can calculate CRC for PDCCH chain within 0.8 us. Original implementation was taking 7 us.
+%- Implemented a bit interleaver which can deal with this format of data.
 
-Optimizations to the original implementations until now.
-Generic optimizations
-- Using optimization primitives such as likely and unlikely.
-- Aligning memory to 32 bytes so copying of data can be vectorized.
-Polar transform optimization	
-- Replace binary additions with xor. instead of addition and then modulus two.
-- division and multiplications by left and right shift operations.
-- Avoided copy operations in polarTransform operations.
-Optimization in getting reliability indices.
-- Avoided remove and erase operations which have huge overhead. Wrote a efficient mechanism(reduced the latency by 176 us).
-- Instead removing and erasing I mark the element as removed.
-- Since the reliability indexes won't change. I built a look up table in place of searching all (1024)indices reduced the latency by 40us
-- Avoided copying operations of interleaved indexes.
-- Unrolled the loop to reduce the jumps.
-Rate matching optimizations.
-- optimization in subblock interleaving, Rewrote the logic to avoid E number of division and modulus operations.
-- Unrolled the for loops in subblock inteleaving method.
-- Implemented optimal version of bit selection, Avoided E number of modulus operations which are very costly.
-- Again optimization primitives for helping the branch predictor.
+In this section, complete polar encoding FEC chain used in 5G is explained. Methods used for code profiling and latency measurement are presented. After figuring out the latency contributors code optimization/algorithm optimizations employed during the FEC chain development are presented and then presents how SIMD feature of the modern processors is exploited to obtain the low latency for PBCH and PDCCH FEC chains and frozen set selection algorithm improvement with the aid of look up table, finally presents the encoding process as traversal of a binary tree and how the encoding latency can be improved by pruning the tree hence avoiding the tree traversal instead using a lookup table to obtain the encoded result.
 
+In 5G framework, Polar codes are used in downlink to encode downlink control information (DCI) over physical downlink control channel (PDCCH) and for payload in physical broadcast channel (PBCH). In uplink, to encode uplink control information (UCI) over the physical uplink control channel (PUCCH) and the physical uplink shared channel (PUSCH). In this work, notations introduced in 3GPP technical specification\cite{3gpp.38.212} are used.
 
-Fast version of Encoding API's.
-In the original implementation of the polar encoding each of the bit is treated as 32 bit integer. This is highly inefficient
-when the goal is to process multiple bits at time. With each bit considered as 32 bit integer SIMD instructions won't provide
-any performance improvement. Reason is SIMD instruction can process multiple bits at time. avx2 instructions 256bits at a time.
-if we have 32 bits to represent a single bit. we can process only 8 bits at time. Which doesn't significantly improve the
-performance. To avoid this disadvantage and make use of SIMD capability. each 64 bit integer is considered as 64 bits of data.
-so one avx2 instruction can process 256 data bits in a single instruction.
-- Built a look up table to avoid last eight stages of polar encoding instead of traversing till end of tree.
-- Implemented SIMD instruction based encoding. Encoding happens within 0.6 us for N = 512.
-- Implemented optimal version of CRC calculation which can calculate CRC for PDCCH chain within 0.8 us. Original implementation was taking 7 us.
-- Implemented a bit interleaver which can deal with this format of data.
-
-\begin{figure}[!htb]
+\begin{figure}[h]
 	\centering
-	\includegraphics[width=0.8\textwidth]{./figures/5GFECChain.pdf}
+	\includegraphics[width=0.7\textwidth]{./figures/5GFECChain.pdf}
 	\caption{Polar Encoding FEC chain for PDCCH/PBCH}
 	\label{fig:5g_fec_chain}
 \end{figure}
+
