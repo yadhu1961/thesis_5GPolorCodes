@@ -44,6 +44,7 @@
     \RequirePackage{titlesec}		%Yadhu added
 	\RequirePackage{varwidth}		%Yadhu added
 	\RequirePackage{svg}			%Yadhu added
+	\RequirePackage{enumitem}
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}

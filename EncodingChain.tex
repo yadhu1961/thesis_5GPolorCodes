@@ -54,8 +54,26 @@ The figure ~\ref{fig:5g_fec_chain} represents the complete polar FEC chain for P
 	\label{fig:5g_fec_chain}
 \end{figure}
 
-
 \section{Data packing and Unpacking Operations}
+Typically in software implementations, for clarity and ease implementation each bit of information is represented with 32-bit or 64-bit integers. Due to the presence of only one bit of information in each integer if want to encode/decode 1024 bits, then 1024 integers are involved in encoding/decoding process. However this isn't the case in hardware implementations since each bit can be processes in Harware Description languages (HDL). Representing each one bit of information using 32/64-bit integer has following disadvantages. 
+
+\begin{description}[font=$\bullet$~\normalfont]
+	\item Increased memory requirement: If represent each information bit using 64-bit integer
+	\item Results in more cache misses:
+	\item Serializes encoding/decoding:
+\end{description}
+
+$\bullet$ Requires more memory for storing the data. \newline
+$\bullet$ Results in more cache misses due more memory accesses. \newline
+$\bullet$ Serializes encoding and decoding procedures. \newline
+
+
+Namely it requires more memory and inherently serializes the process of encoding/decoding i.e each individual bit is processed sequentially.]
+
+For example 
+
+
+
 Explain why and how packing and unpacking is carried out and the advantages of data packing and unpacking.
 
 \section{CRC calculation}
