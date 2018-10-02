@@ -43,8 +43,10 @@
     \RequirePackage{subfigure}      % enable subfigures / Ermoeglicht Subfigures (mehrere Figures neben/untereinander)
     \RequirePackage{titlesec}		%Yadhu added
 	\RequirePackage{varwidth}		%Yadhu added
-	\RequirePackage{svg}			%Yadhu added
-	\RequirePackage{enumitem}
+	\RequirePackage{enumitem}		%Yadhu added for bullets
+	\RequirePackage{Listings}		%Yadhu added for code snippets
+	\RequirePackage{xcolor}
+	\RequirePackage{caption}
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}

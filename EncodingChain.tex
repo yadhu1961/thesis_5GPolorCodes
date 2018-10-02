@@ -54,30 +54,56 @@ The figure ~\ref{fig:5g_fec_chain} represents the complete polar FEC chain for P
 	\label{fig:5g_fec_chain}
 \end{figure}
 
-\section{Data packing and Unpacking Operations}
+\section{Data packing and Unpacking Operations} \label{dataPackUnpack}
 Typically in software implementations, for clarity and ease implementation each bit of information is represented with 32-bit or 64-bit integers. Due to the presence of only one bit of information in each integer if want to encode/decode 1024 bits, then 1024 integers are involved in encoding/decoding process. However this isn't the case in hardware implementations since each bit can be processes in Harware Description languages (HDL). Representing each one bit of information using 32/64-bit integer has following disadvantages. 
 
 \begin{description}[font=$\bullet$~\normalfont]
-	\item Increased memory requirement: If represent each information bit using 64-bit integer
-	\item Results in more cache misses:
-	\item Serializes encoding/decoding:
+	\item Increased memory footprint: If one decides to represent each bit using 64-bit integer for 1024 bits of information 64*1024 bits memory needs to allocated which equivalent to 8 kilobytes. Allocating and initializing this memory can introduce significant latency.
+	\item Results in more cache misses: If more memory is allocated then more data needs to accessed from DRAM which can result in significant number of cache misses.
+	\item Serializes encoding/decoding: General purpose processor's have a data path width of 64-bit. If each bit is represented using 64-bit integer we are not using capability of processing 64 bits simultaneously instead each bit is processed sequentially. This can make encoding/decoding sequential although processor is capable of processing multiple bits in parallel.
 \end{description}
 
-$\bullet$ Requires more memory for storing the data. \newline
-$\bullet$ Results in more cache misses due more memory accesses. \newline
-$\bullet$ Serializes encoding and decoding procedures. \newline
+To avoid these disadvantages and to enable data parallelism, this implementation of encoder tries to pack the multiple information bits to one integer. Although packing information bits to single integer has advantages, for some operations such as bit wise interleaving accessing each bit efficiently is very important. To exploit the advantages of bit packing as well as the advantages of each bit as integer, it is necessary to convert between the two. This is where the power of SIMD instructions in modern processors come to rescue. These processors come with special hardware instructions which help to efficiently pack and unpack data. Information bits are used in packed format when data parallelism needs to exploited and in unpacked format when certain operations require bits to accessed individually. These pack/unpack instructions are very efficient with low latency.
 
+Some examples of these instructions are:
+\begin{lstlisting}
+	int _mm_movemask_pi8(__m64 a);
+	int _mm_movemask_epi8(__m128i a);
+	__m256i _mm256_unpackhi_epi8(__m256i a, __m256i b);
+	/** many more **/
+\end{lstlisting}
 
-Namely it requires more memory and inherently serializes the process of encoding/decoding i.e each individual bit is processed sequentially.]
+\TODO{May be give examples code snippet which packs and unpacks bits in an efficient manner.}
 
-For example 
-
-
-
-Explain why and how packing and unpacking is carried out and the advantages of data packing and unpacking.
+\TODO{cite to agner fog optimization manuals. \cite{AgnerFog} , \cite{DeltaFunction}}
 
 \section{CRC calculation}
-Explain why CRC attachment is considered in whole FEC chain, how it is useful for decoding polar codes. Explain algorithmic complexity of CRC calculation, How much time it was taking, How the optimization is carried out reduce the CRC calculation time.
+%Explain why CRC attachment is considered in whole FEC chain, how it is useful for decoding polar codes. Explain algorithmic complexity of CRC calculation, How much time it was taking, How the optimization is carried out to reduce the CRC calculation time.
+As shown in the figure \ref{fig:5g_fec_chain} L-bit CRC is calculated for $A$ information bits and attached as part of message. Number of CRC bits (L) varies for different physical channels. In downlink, for payload of PBCH/PDCCH 24-bit CRC is used. Uplink Control Information (UCI) uses 6-bit or 11-bit CRC based on the value of $A$. For $12 \leq A \leq 19$ and $A \geq 20$ 6-bit CRC and 11-bit CRC are used respectively. Polynomials use for different CRC values is shown below \cite{3gpp.38.212}.
+
+\begin{equation} \label{crc_polynomial6}
+g_{6}(x) = x^{6} + x^{4} + 1
+\end{equation}
+\begin{equation} \label{crc_polynomial11}
+g_{11}(x) = x^{11} + x^{10} + x^{9} + x^{5} + 1
+\end{equation}
+\begin{equation} \label{crc_polynomial24}
+g_{24}(x) = x^{24} + x^{23} + x^{21} + x^{20} + x^{17} + x^{13} + x^{12} + x^{8} + x^{4} + x^{2} + x + 1
+\end{equation}
+
+Information bits concatenated with CRC increases the error correction performance of polar codes significantly. CRC is be used for selecting the correct code word out of potential candidates when employing a list-decoding algorithm. With CRC aided decoding, polar codes performance is very close maximum likelihood decoding. To reduce the latency of encoding FEC chain CRC needs to calculated very efficiently. One of the naive implementation of CRC calculation is, by using shift register method, which calculates CRC sequentially for one bit at a time as given in \cite{naiveCRCCalculation}. As explained in the section \ref{dataPackUnpack}, it is very inefficient to process bits sequentially. Instead one can calculate the CRC blockwise with the help of lookup table. In otherwords, divide the data into blocks of $B$-bits, read the corresponding CRC value from lookup table and combine individual CRC's of blocks in an predefined way to create a CRC for complete data. Algorithm in \cite{Sarwate:1988:CCR:63030.63037} is adopted to calculate CRC24 using lookup table based approach. Data bits are divided into blocks of 8-bits and packed into 8 bit integers. CRC value corresponding to 8-bit integer is read from lookup table and combined with CRC of subsequent 8-bit integer, this process continues until CRC of data bits is completed. If the number of data bits are not multiple of 8 then zero's are appended at MSB position.  Table \ref{tab:crcLatencyTable} presents the latency values of naive and optimized  CRC calculation methods for payload of 41-bits on AMD EPYC processor running at 1.6GhZ with turbo disabled. There is significant improvement in the optimized method compared to naive implementation.
+
+\begin{table}[h!]
+	\begin{center}
+		\caption{CRC24 calculation latency comparison}
+		\label{tab:crcLatencyTable}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Naive & Optimized \\
+			\hline
+			Latency ($\mu$s) & $9.3$ & $0.016$\\
+		\end{tabular}
+	\end{center}
+\end{table}
 
 \section{Input Bit Interleaver}
 Any optimization carried out in here, need to be explained clearly, Why this input bit interleaver is necessary. How much time this function takes.
