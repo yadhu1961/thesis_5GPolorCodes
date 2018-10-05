@@ -41,6 +41,12 @@
     % more information on amsmath: http://www.ctan.org/get/macros/latex/required/amslatex/math/amsldoc.pdf
     \RequirePackage{psfrag}         % psfrag: http://www.ctan.org/get/macros/latex/contrib/psfrag/pfgguide.pdf
     \RequirePackage{subfigure}      % enable subfigures / Ermoeglicht Subfigures (mehrere Figures neben/untereinander)
+    \RequirePackage{titlesec}		%Yadhu added
+	\RequirePackage{varwidth}		%Yadhu added
+	\RequirePackage{enumitem}		%Yadhu added for bullets
+	\RequirePackage{Listings}		%Yadhu added for code snippets
+	\RequirePackage{xcolor}
+	\RequirePackage{caption}
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}

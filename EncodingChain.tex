@@ -1,0 +1,127 @@
+\chapter{Encoding FEC Chain} \label{chap:encoder}
+
+% In this document explain all the things which I have done until the midterm presentation.
+% All the details, Optimization techniques I have employed.
+% Following text might be useful for writing the text.
+% Also my midterm presentations/office presentations will be really useful for writing this part.  
+% Reference paper for explaining the different components of the this FEC chain "Design of Polar codes for 5G NR radio"
+
+%Work I have done Until now.
+%
+%Optimizations to the original implementations until now.
+%Generic optimizations
+%- Using optimization primitives such as likely and unlikely.
+%- Aligning memory to 32 bytes so copying of data can be vectorized.
+%Polar transform optimization	
+%- Replace binary additions with xor. instead of addition and then modulus two.
+%- division and multiplications by left and right shift operations.
+%- Avoided copy operations in polarTransform operations.
+%Optimization in getting reliability indices.
+%- Avoided remove and erase operations which have huge overhead. Wrote a efficient mechanism(reduced the latency by 176 us).
+%- Instead removing and erasing I mark the element as removed.
+%- Since the reliability indexes won't change. I built a look up table in place of searching all (1024)indices reduced the latency by 40us
+%- Avoided copying operations of interleaved indexes.
+%- Unrolled the loop to reduce the jumps.
+%Rate matching optimizations.
+%- optimization in subblock interleaving, Rewrote the logic to avoid E number of division and modulus operations.
+%- Unrolled the for loops in subblock inteleaving method.
+%- Implemented optimal version of bit selection, Avoided E number of modulus operations which are very costly.
+%- Again optimization primitives for helping the branch predictor.
+%
+%
+%Fast version of Encoding API's.
+%In the original implementation of the polar encoding each of the bit is treated as 32 bit integer. This is highly inefficient
+%when the goal is to process multiple bits at time. With each bit considered as 32 bit integer SIMD instructions won't provide
+%any performance improvement. Reason is SIMD instruction can process multiple bits at time. avx2 instructions 256bits at a time.
+%if we have 32 bits to represent a single bit. we can process only 8 bits at time. Which doesn't significantly improve the
+%performance. To avoid this disadvantage and make use of SIMD capability. each 64 bit integer is considered as 64 bits of data.
+%so one avx2 instruction can process 256 data bits in a single instruction.
+%- Built a look up table to avoid last eight stages of polar encoding instead of traversing till end of tree.
+%- Implemented SIMD instruction based encoding. Encoding happens within 0.6 us for N = 512.
+%- Implemented optimal version of CRC calculation which can calculate CRC for PDCCH chain within 0.8 us. Original implementation was taking 7 us.
+%- Implemented a bit interleaver which can deal with this format of data.
+
+In this section, complete polar encoding FEC chain used in 5G is explained. Methods used for code profiling and latency measurement are presented. After figuring out the latency contributors code optimization/algorithm optimizations employed during the FEC chain development are presented and then presents how SIMD feature of the modern processors is exploited to obtain the low latency for PBCH and PDCCH FEC chains and frozen set selection algorithm improvement with the aid of look up table, finally presents the encoding process as traversal of a binary tree and how the encoding latency can be improved by pruning the tree hence avoiding the tree traversal instead using a lookup table to obtain the encoded result.
+
+In 5G framework, Polar codes are used in downlink to encode downlink control information (DCI) over physical downlink control channel (PDCCH) and for payload in physical broadcast channel (PBCH). In uplink, to encode uplink control information (UCI) over the physical uplink control channel (PUCCH) and the physical uplink shared channel (PUSCH). In this work, notations introduced in 3GPP technical specification\cite{3gpp.38.212} are used.
+
+The figure ~\ref{fig:5g_fec_chain} represents the complete polar FEC chain for PBCH and PDCCH in downlink. Let's look at each of the components briefly to understand the FEC chain. In general $A$ bits have to be transmitted over a code of length $E$ code bits. $L$ CRC bits are added to the information bits, resulting in  $K = (A + L)$ bits. These $K$ bits are passed through an interleaver. Interleaved bits are concatenated with a parity bits and assigned to information set to obtain a vector $\boldsymbol{u}$. Encoding is done with a mother code with parameters $(N,K)$, with $N = 2_{n}$. Encoding is performed $\boldsymbol{d = uG_{N}}$ the generator matrix $\boldsymbol{G_{N} = G^{\otimes n}}$ obtained by $n^{th}$ kronecker product of Arikan matrix. Encoded codeword $\boldsymbol{d}$ passed through a subblock interleaver which divides the codeword in to blocks of 32 bits and performs interleaving between them according to 32 integers (interleaving pattern is nothing but a bit reversal of bit position) shown in figure. \textbf{add picture of bit reversal operation}. After subblock interleaving is completed rate matching is carried out. To map $N$ to $E$ bits. Rate matching can repetition, puncturing or shortening. This decision is taken based on the value of $E$, $N$ and $K$. Finally to improve the error correction performance channel interleaving is done. This section of the report presents  implementation details of each of these operations in an algorithmic level with small code snippets whenever necessary. Analyzes latency introduced by different sections of FEC chain and also presents the algorithmic and platform specific optimizations.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\textwidth]{./figures/5GFECChain.pdf}
+	\caption{Polar Encoding FEC chain for PDCCH/PBCH}
+	\label{fig:5g_fec_chain}
+\end{figure}
+
+\section{Data packing and Unpacking Operations} \label{dataPackUnpack}
+Typically in software implementations, for clarity and ease implementation each bit of information is represented with 32-bit or 64-bit integers. Due to the presence of only one bit of information in each integer if want to encode/decode 1024 bits, then 1024 integers are involved in encoding/decoding process. However this isn't the case in hardware implementations since each bit can be processes in Harware Description languages (HDL). Representing each one bit of information using 32/64-bit integer has following disadvantages. 
+
+\begin{description}[font=$\bullet$~\normalfont]
+	\item Increased memory footprint: If one decides to represent each bit using 64-bit integer for 1024 bits of information 64*1024 bits memory needs to allocated which equivalent to 8 kilobytes. Allocating and initializing this memory can introduce significant latency.
+	\item Results in more cache misses: If more memory is allocated then more data needs to accessed from DRAM which can result in significant number of cache misses.
+	\item Serializes encoding/decoding: General purpose processor's have a data path width of 64-bit. If each bit is represented using 64-bit integer we are not using capability of processing 64 bits simultaneously instead each bit is processed sequentially. This can make encoding/decoding sequential although processor is capable of processing multiple bits in parallel.
+\end{description}
+
+To avoid these disadvantages and to enable data parallelism, this implementation of encoder tries to pack the multiple information bits to one integer. Although packing information bits to single integer has advantages, for some operations such as bit wise interleaving accessing each bit efficiently is very important. To exploit the advantages of bit packing as well as the advantages of each bit as integer, it is necessary to convert between the two. This is where the power of SIMD instructions in modern processors come to rescue. These processors come with special hardware instructions which help to efficiently pack and unpack data. Information bits are used in packed format when data parallelism needs to exploited and in unpacked format when certain operations require bits to accessed individually. These pack/unpack instructions are very efficient with low latency.
+
+Some examples of these instructions are:
+\begin{lstlisting}
+	int _mm_movemask_pi8(__m64 a);
+	int _mm_movemask_epi8(__m128i a);
+	__m256i _mm256_unpackhi_epi8(__m256i a, __m256i b);
+	/** many more **/
+\end{lstlisting}
+
+\TODO{May be give examples code snippet which packs and unpacks bits in an efficient manner.}
+
+\TODO{cite to agner fog optimization manuals. \cite{AgnerFog} , \cite{DeltaFunction}}
+
+\section{CRC calculation}
+%Explain why CRC attachment is considered in whole FEC chain, how it is useful for decoding polar codes. Explain algorithmic complexity of CRC calculation, How much time it was taking, How the optimization is carried out to reduce the CRC calculation time.
+As shown in the figure \ref{fig:5g_fec_chain} L-bit CRC is calculated for $A$ information bits and attached as part of message. Number of CRC bits (L) varies for different physical channels. In downlink, for payload of PBCH/PDCCH 24-bit CRC is used. Uplink Control Information (UCI) uses 6-bit or 11-bit CRC based on the value of $A$. For $12 \leq A \leq 19$ and $A \geq 20$ 6-bit CRC and 11-bit CRC are used respectively. Polynomials use for different CRC values is shown below \cite{3gpp.38.212}.
+
+\begin{equation} \label{crc_polynomial6}
+g_{6}(x) = x^{6} + x^{4} + 1
+\end{equation}
+\begin{equation} \label{crc_polynomial11}
+g_{11}(x) = x^{11} + x^{10} + x^{9} + x^{5} + 1
+\end{equation}
+\begin{equation} \label{crc_polynomial24}
+g_{24}(x) = x^{24} + x^{23} + x^{21} + x^{20} + x^{17} + x^{13} + x^{12} + x^{8} + x^{4} + x^{2} + x + 1
+\end{equation}
+
+Information bits concatenated with CRC increases the error correction performance of polar codes significantly. CRC is be used for selecting the correct code word out of potential candidates when employing a list-decoding algorithm. With CRC aided decoding, polar codes performance is very close maximum likelihood decoding. To reduce the latency of encoding FEC chain CRC needs to calculated very efficiently. One of the naive implementation of CRC calculation is, by using shift register method, which calculates CRC sequentially for one bit at a time as given in \cite{naiveCRCCalculation}. As explained in the section \ref{dataPackUnpack}, it is very inefficient to process bits sequentially. Instead one can calculate the CRC blockwise with the help of lookup table. In otherwords, divide the data into blocks of $B$-bits, read the corresponding CRC value from lookup table and combine individual CRC's of blocks in an predefined way to create a CRC for complete data. Algorithm in \cite{Sarwate:1988:CCR:63030.63037} is adopted to calculate CRC24 using lookup table based approach. Data bits are divided into blocks of 8-bits and packed into 8 bit integers. CRC value corresponding to 8-bit integer is read from lookup table and combined with CRC of subsequent 8-bit integer, this process continues until CRC of data bits is completed. If the number of data bits are not multiple of 8 then zero's are appended at MSB position.  Table \ref{tab:crcLatencyTable} presents the latency values of naive and optimized  CRC calculation methods for payload of 41-bits on AMD EPYC processor running at 1.6 GHz with Turbo disabled. There is significant improvement in the optimized method compared to naive implementation.
+
+\begin{table}[h!]
+	\begin{center}
+		\caption{CRC24 calculation latency comparison}
+		\label{tab:crcLatencyTable}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Naive & Optimized \\
+			\hline
+			Latency ($\mu$s) & $9.3$ & $0.016$\\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\section{Input Bit Interleaver}
+\TODO{Any optimization carried out in here, need to be explained clearly, Why this input bit interleaver is necessary. How much time this function takes.}
+
+\section{Polar code construction}
+\TODO{Here explain the algorithm how frozen/information/parity indices are selected. With an algorithm and flow chart which makes very clear/easy to understand the algorithm. Explain the effect of puncturing and shortening on the bit reliability. May be mode should be selected, either as puncturing/shortening at constructor. And corresponding operations are performed accordingly. Give also the details about information bit insertion reliable locations. Explain the effect of puncturing and shortening on the reliability of bit channels.}
+The next step in the polar FEC chain in 5G is polar code construction. This step determines the error correction performance. Polar code construction is the process of identifying information and frozen bit position, i.e K out of N positions. There are many methods in the literature to construct polar codes. The inventor of polar code Arikan \cite{Arikan} proposed using Bhattacharyya parameter as reliability metric for Binary Erasure Channels (BEC) then deriving reliability values using Monte Carlo simulation. For other channels, Mori and Tanaka proposed
+
+
+Next block in the polar FEC chain, polar code construction. It is the step to identify where the information bits needs to be placed.
+
+
+
+
+\section{Polar Encoding}
+Explain how the matrix multiplication is transformed into recursive formulation. Represent the encoding procedure as traversing through binary tree. How the parallelism of SIMD processor is exploited speed up the encoding process. Explain the employed tree pruning method.
+
+\section{Results Comparison}
+
+
+
