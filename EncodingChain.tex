@@ -110,6 +110,10 @@ Information bits concatenated with CRC increases the error correction performanc
 
 \section{Polar code construction}
 \TODO{Here explain the algorithm how frozen/information/parity indices are selected. With an algorithm and flow chart which makes very clear/easy to understand the algorithm. Explain the effect of puncturing and shortening on the bit reliability. May be mode should be selected, either as puncturing/shortening at constructor. And corresponding operations are performed accordingly. Give also the details about information bit insertion reliable locations. Explain the effect of puncturing and shortening on the reliability of bit channels.}
+The next step in the polar FEC chain in 5G is polar code construction. This step determines the error correction performance. Polar code construction is the process of identifying information and frozen bit position, i.e K out of N positions. There are many methods in the literature to construct polar codes. The inventor of polar code Arikan \cite{Arikan} proposed using Bhattacharyya parameter as reliability metric for Binary Erasure Channels (BEC) then deriving reliability values using Monte Carlo simulation. For other channels, Mori and Tanaka proposed
+
+
+Next block in the polar FEC chain, polar code construction. It is the step to identify where the information bits needs to be placed.
 
 
 
