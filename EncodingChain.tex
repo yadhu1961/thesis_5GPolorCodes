@@ -45,7 +45,7 @@ In this section, complete polar encoding FEC chain used in 5G is explained. Meth
 
 In 5G framework, Polar codes are used in downlink to encode downlink control information (DCI) over physical downlink control channel (PDCCH) and for payload in physical broadcast channel (PBCH). In uplink, to encode uplink control information (UCI) over the physical uplink control channel (PUCCH) and the physical uplink shared channel (PUSCH). In this work, notations introduced in 3GPP technical specification\cite{3gpp.38.212} are used.
 
-The figure ~\ref{fig:5g_fec_chain} represents the complete polar FEC chain for PBCH and PDCCH in downlink. Let's look at each of the components briefly to understand the FEC chain. In general $A$ bits have to be transmitted over a code of length $E$ code bits. $L$ CRC bits are added to the information bits, resulting in  $K = (A + L)$ bits. These $K$ bits are passed through an interleaver. Interleaved bits are concatenated with a parity bits and assigned to information set to obtain a vector $\boldsymbol{u}$. Encoding is done with a mother code with parameters $(N,K)$, with $N = 2_{n}$. Encoding is performed $\boldsymbol{d = uG_{N}}$ the generator matrix $\boldsymbol{G_{N} = G^{\otimes n}}$ obtained by $n^{th}$ kronecker product of Arikan matrix. Encoded codeword $\boldsymbol{d}$ passed through a subblock interleaver which divides the codeword in to blocks of 32 bits and performs interleaving between them according to 32 integers (interleaving pattern is nothing but a bit reversal of bit position) shown in figure. \textbf{add picture of bit reversal operation}. After subblock interleaving is completed rate matching is carried out. To map $N$ to $E$ bits. Rate matching can repetition, puncturing or shortening. This decision is taken based on the value of $E$, $N$ and $K$. Finally to improve the error correction performance channel interleaving is done. This section of the report presents  implementation details of each of these operations in an algorithmic level with small code snippets whenever necessary. Analyzes latency introduced by different sections of FEC chain and also presents the algorithmic and platform specific optimizations.
+The figure ~\ref{fig:5g_fec_chain} represents the complete polar FEC chain for PBCH and PDCCH in downlink. Let's look at each of the components briefly to understand the FEC chain. In general $A$ bits have to be transmitted over a code of length $E$ code bits. $L$ CRC bits are added to the information bits, resulting in  $K = (A + L)$ bits. These $K$ bits are passed through an interleaver. Interleaved bits are concatenated with a parity bits and assigned to information set to obtain a vector $\boldsymbol{u}$. Encoding is done with a mother code with parameters $(N,K)$, with $N = 2^{n}$. Encoding is performed $\boldsymbol{d = uG_{N}}$ the generator matrix $\boldsymbol{G_{N} = G^{\otimes n}}$ obtained by $n^{th}$ kronecker product of Arikan matrix. Encoded codeword $\boldsymbol{d}$ passed through a subblock interleaver which divides the codeword in to blocks of 32 bits and performs interleaving between them according to 32 integers (interleaving pattern is nothing but a bit reversal of bit position) shown in figure. \TODO{add picture of bit reversal operation}. After subblock interleaving is completed rate matching is carried out. To map $N$ to $E$ bits. Rate matching can repetition, puncturing or shortening. This decision is taken based on the value of $E$, $N$ and $K$. Finally to improve the error correction performance channel interleaving is done. This section of the report presents  implementation details of each of these operations in an algorithmic level with small code snippets whenever necessary. Analyzes latency introduced by different sections of FEC chain and also presents the algorithmic and platform specific optimizations.
 
 \begin{figure}[h]
 	\centering
@@ -100,7 +100,7 @@ Information bits concatenated with CRC increases the error correction performanc
 		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
 			\textbf{ } & Naive & Optimized \\
 			\hline
-			Latency ($\mu$s) & $9.3$ & $0.016$\\
+			Latency ($\mu$s) & $7.7$ & $0.016$\\
 		\end{tabular}
 	\end{center}
 \end{table}
@@ -109,13 +109,62 @@ Information bits concatenated with CRC increases the error correction performanc
 \TODO{Any optimization carried out in here, need to be explained clearly, Why this input bit interleaver is necessary. How much time this function takes.}
 
 \section{Polar code construction}
-\TODO{Here explain the algorithm how frozen/information/parity indices are selected. With an algorithm and flow chart which makes very clear/easy to understand the algorithm. Explain the effect of puncturing and shortening on the bit reliability. May be mode should be selected, either as puncturing/shortening at constructor. And corresponding operations are performed accordingly. Give also the details about information bit insertion reliable locations. Explain the effect of puncturing and shortening on the reliability of bit channels.}
-The next step in the polar FEC chain in 5G is polar code construction. This step determines the error correction performance. Polar code construction is the process of identifying information and frozen bit position, i.e K out of N positions. There are many methods in the literature to construct polar codes. The inventor of polar code Arikan \cite{Arikan} proposed using Bhattacharyya parameter as reliability metric for Binary Erasure Channels (BEC) then deriving reliability values using Monte Carlo simulation. For other channels, Mori and Tanaka proposed
+The next step in the polar FEC chain in 5G is polar code construction. This step determines the error correction performance. Polar code construction is the process of identifying information and frozen bit position, i.e K out of N positions. There are many methods in the literature to construct polar codes. The inventor of polar code Arikan \cite{Arikan} proposed using Bhattacharyya parameter as reliability metric for Binary Erasure Channels (BEC) then deriving reliability values using Monte Carlo simulation. For other channels, Mori and Tanaka \cite{MoriTanakaDE} use more accurate density evolution (DE) methods but suffers huge complexity. Tal and vardy proposed Gaussian Approximation (GA) to reduce the complexity of DE with approximations. Still the GA method has high computational complexity which scales linearly with code block-length, and therefore unacceptable for varying SNR, block-length and code rate. In use cases such as 5G, where channel is continuously varying. it is not feasible to construct polar codes on the fly due to the complexity and stringent latency requirements of encoder and decoder. Polar code construction in 5G takes a suboptimal approach, instead of constructing polar codes for every different SNR, block-length and code rate, construction is carried out in such a way that code performs sufficiently good over large range of SNR, block-length and code rate. 5G polar code construction method is a contribution from Huawei which uses a $\beta$-expansion method with universal partial order (UPO) property of channel reliability as presented in \cite{betaExpansion}.
+
+5G standard has adopted five different block-lengths polar codes. Block-length sizes $\mathcal{B}$ is given by $\mathcal{B} = \{32,64,128,256,512,1024\}$.
+For each of the block lengths reliability indices values are specified in \cite{3gpp.38.212}. Polar code construction is straight forward when rate matching output $E$ greater than or equal to block length $N$, In such a case code construction involves selection of $K$ most reliable indices for information bits remaining positions are frozen. When rate matching output size $E$ is smaller than block-length $N$ reliability indices selection
+
+\subsubsection*{5G polar code construction example for $N = 32, K = 16$ and $E = N$} \label{E_greaterThan_N}
+Let's take an example with $N = 32$ channel reliability values are extracted from the reliability table provided in \cite{3gpp.38.212} and are given by
+
+\begin{eqnarray*}
+Q_{0}^{31} = \{ 0, 1, 2, 6, 3, 7, 9, 16,4, 8, 11, 17, 13, 19, 20, 26, 5, 10, 12, 18, 14, 21, 24, 27, 15, 23, 22, 28,\\
+25, 29, 30, 31 \}
+\end{eqnarray*}
+
+The bit positions in reliability array $Q_{0}^{31}$ are ordered in increasing order of their reliability. For encoding with parameters $N = 32$ and $K = 16$, K most reliable indices in the array i.e last 16 indices are used as information bit positions 
+
+\begin{eqnarray*}
+	Q_{\textit{I}}^{\textit{K}} =  \{5, 10, 12, 18, 14, 21, 24, 27, 15, 23, 22, 28,25, 29, 30, 31 \}
+\end{eqnarray*} 
+
+There can be three cases with rate matching, $E > N$, $E == N$ and $E < N$ each of the cases requires different rate matching scheme, repetition, no rate matching and puncturing or shortening respectively. For the first case, due to no puncturing or shortening reliability values of bit channels are not affected after rate matching. Simplest case in polar code construction is when $E \geq N$. In this scenario no puncturing or shortening required.  In 5G FEC chain, it is not uncommon to have scenarios with rate matching output $E$ is less than block-length $N$. In such scenarios some bits need to discarded in rate matching stage through puncturing or shortening. Empirically its been observed for polar codes that at low rates puncturing works better and shortening for high rates \cite{lowcomplexityPuncShorteng}. When encoded bits are discarded in the rate matching stage reliability of bit channels get affected, identification reliable bits by taking effect of rate matching procedure makes polar code construction complex in terms of time. Functional implementation of reliability indices selection algorithm provided in \cite{3gpp.38.212} is carried out in C++ as given  ~\ref{algo:polarCodeConstuctionAlgo}. Upon code profiling of encoder FEC chain implementation, it was found that polar code selection algorithm is the most time consuming part among the whole FEC chain stages. 
+
+Following algorithm gives provides a simplified picture of implementation details of  involved in selection of most reliable channel indices.
+
+\IncMargin{1.5em}
+\begin{algorithm}[H]
+	\KwData{$Q_{0}^{N-1}$,$N$, $K$, $E$ and $J(n)$}
+	\KwResult{$Q_{\textit{I}}^{\textit{K}}$}
+	$\overline{Q}_{F}^{N} = \emptyset$ \;
+	\If($E$ < $N$) {
+		\lWhile{not at end of this document}{
+			read current\;
+			\eIf{understand}{
+				go to next section\;
+				current section becomes this one\;
+			}{
+				go back to the beginning of current section\;
+			}
+		}
+	}
+	
+	\Else {
+	
+
+	
+	
+	}
+	
+
+	\caption{Polar code construction}
+	\label{algo:polarCodeConstuctionAlgo}
+\end{algorithm}
+\DecMargin{1.5em}
 
 
 Next block in the polar FEC chain, polar code construction. It is the step to identify where the information bits needs to be placed.
-
-
+\TODO{\newline Here explain the algorithm how frozen/information/parity indices are selected. With an algorithm and flow chart which makes very clear/easy to understand the algorithm. Explain the effect of puncturing and shortening on the bit reliability. May be mode should be selected, either as puncturing/shortening at constructor. And corresponding operations are performed accordingly. Give also the details about information bit insertion reliable locations. Explain the effect of puncturing and shortening on the reliability of bit channels.}
 
 
 \section{Polar Encoding}

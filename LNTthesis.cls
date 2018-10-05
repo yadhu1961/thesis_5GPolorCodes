@@ -46,7 +46,8 @@
 	\RequirePackage{enumitem}		%Yadhu added for bullets
 	\RequirePackage{Listings}		%Yadhu added for code snippets
 	\RequirePackage{xcolor}
-	\RequirePackage{caption}
+	\RequirePackage[parfill]{parskip}
+	\RequirePackage[ruled,linesnumbered]{algorithm2e}
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}
