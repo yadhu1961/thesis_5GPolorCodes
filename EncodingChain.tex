@@ -8,21 +8,21 @@
 
 %Work I have done Until now.
 %
-%Optimizations to the original implementations until now.
-%Generic optimizations
+%%****************Optimizations to the original implementations until now.
+%%****************Generic optimizations
 %- Using optimization primitives such as likely and unlikely.
 %- Aligning memory to 32 bytes so copying of data can be vectorized.
-%Polar transform optimization	
+%- Polar transform optimization	
 %- Replace binary additions with xor. instead of addition and then modulus two.
 %- division and multiplications by left and right shift operations.
 %- Avoided copy operations in polarTransform operations.
-%Optimization in getting reliability indices.
+%****************Optimization in getting reliability indices.
 %- Avoided remove and erase operations which have huge overhead. Wrote a efficient mechanism(reduced the latency by 176 us).
 %- Instead removing and erasing I mark the element as removed.
 %- Since the reliability indexes won't change. I built a look up table in place of searching all (1024)indices reduced the latency by 40us
 %- Avoided copying operations of interleaved indexes.
 %- Unrolled the loop to reduce the jumps.
-%Rate matching optimizations.
+%****************Rate matching optimizations.
 %- optimization in subblock interleaving, Rewrote the logic to avoid E number of division and modulus operations.
 %- Unrolled the for loops in subblock inteleaving method.
 %- Implemented optimal version of bit selection, Avoided E number of modulus operations which are very costly.
@@ -128,47 +128,88 @@ The bit positions in reliability array $Q_{0}^{31}$ are ordered in increasing or
 	Q_{\textit{I}}^{\textit{K}} =  \{5, 10, 12, 18, 14, 21, 24, 27, 15, 23, 22, 28,25, 29, 30, 31 \}
 \end{eqnarray*} 
 
-There can be three cases with rate matching, $E > N$, $E == N$ and $E < N$ each of the cases requires different rate matching scheme, repetition, no rate matching and puncturing or shortening respectively. For the first case, due to no puncturing or shortening reliability values of bit channels are not affected after rate matching. Simplest case in polar code construction is when $E \geq N$. In this scenario no puncturing or shortening required.  In 5G FEC chain, it is not uncommon to have scenarios with rate matching output $E$ is less than block-length $N$. In such scenarios some bits need to discarded in rate matching stage through puncturing or shortening. Empirically its been observed for polar codes that at low rates puncturing works better and shortening for high rates \cite{lowcomplexityPuncShorteng}. When encoded bits are discarded in the rate matching stage reliability of bit channels get affected, identification reliable bits by taking effect of rate matching procedure makes polar code construction complex in terms of time. Functional implementation of reliability indices selection algorithm provided in \cite{3gpp.38.212} is carried out in C++ as given  ~\ref{algo:polarCodeConstuctionAlgo}. Upon code profiling of encoder FEC chain implementation, it was found that polar code selection algorithm is the most time consuming part among the whole FEC chain stages. 
+There can be three cases with rate matching, $E > N$, $E == N$ and $E < N$ each of the cases requires different rate matching scheme, repetition, no rate matching and puncturing or shortening respectively. For the first case, due to no puncturing or shortening reliability values of bit channels are not affected after rate matching. Simplest case in polar code construction is when $E \geq N$. In this scenario no puncturing or shortening required.  In 5G FEC chain, it is not uncommon to have scenarios with rate matching output $E$ is less than block-length $N$. In such scenarios some bits need to discarded in rate matching stage through puncturing or shortening. Empirically its been observed for polar codes that at low rates puncturing works better and shortening for high rates \cite{lowcomplexityPuncShorteng}. When encoded bits are discarded in the rate matching stage reliability of bit channels get affected, identification reliable bits by taking effect of rate matching procedure makes polar code construction complex in terms of time. Functional implementation of reliability indices selection algorithm provided in \cite{3gpp.38.212} is carried out in C++ as given  ~\ref{algo:polarCodeConstuctionAlgo}. Upon code profiling of encoder FEC chain implementation, it was found that polar code selection algorithm is the most time consuming part among all the FEC chain stages. \newline
 
-Following algorithm gives provides a simplified picture of implementation details of  involved in selection of most reliable channel indices.
+Following algorithm gives provides a simplified picture of function implementation to select information bit indices by taking the effect of rate matching. 
+Notations used in the algorithm are same as the ones specified in 5G standard \cite{3gpp.38.212}.
+
+$J(n)$ : Subblock interleaver pattern for a particular block-length $N$. \newline
+$E$    : Rate matcher output size. \newline
+$N$	   : Mother code block length. \newline
+$K$	   : Number of information bits.\newline
+$Q_{\textit{0}}^{\textit{N-1}}$ : Reliability indices array for block-length $N$ in ascending order of reliability. \newline
+$\overline{Q}_{\textit{F}}^{\textit{N}}$ : Information bit positions. \newline
+
 
 \IncMargin{1.5em}
 \begin{algorithm}[H]
-	\KwData{$Q_{0}^{N-1}$,$N$, $K$, $E$ and $J(n)$}
-	\KwResult{$Q_{\textit{I}}^{\textit{K}}$}
-	$\overline{Q}_{F}^{N} = \emptyset$ \;
-	\If($E$ < $N$) {
-		\lWhile{not at end of this document}{
-			read current\;
-			\eIf{understand}{
-				go to next section\;
-				current section becomes this one\;
-			}{
-				go back to the beginning of current section\;
-			}
+	\KwData{$Q_{\textit{0}}^{\textit{N-1}}$,$N$, $K$, $E$ and $J(n)$}
+	\KwResult{$\overline{Q}_{\textit{I}}^{\textit{K}}$}
+	$\overline{Q}_{\textit{F}}^{\textit{N}} = \emptyset$ \;
+	\If {$\big(E < N\big)$} {
+		\If {$\big((K*16) \leq (E*7)\big)$} {   %-------------------------------------------------> Puncturing
+			$J_{sorted}(n) = sort(\{J(0),J(1),J(2)....J(N-E)\})$\;  \label{line:subblockRef1}
+			\If {$\big(E \ge (0.75*N)\big)$} {
+				$size = \ceil*{\big[(3*N*2 - E*4)/8\big]}$\;
+				$\overline{Q}_{F}^{N} = J_{sorted}(n) \cup \{0,1,2, ... ,size-1\}$ \label{line:subblockRef2}
+			} \Else {
+				$size = \ceil*{\big[(9*N*4 - E*16)/64\big]}$\;
+				$\overline{Q}_{F}^{N} = J_{sorted}(n) \cup \{0,1,2, ... ,size-1\}$ \label{line:subblockRef3}
+			}	
+		} \Else {							    %-------------------------------------------------> Shortening
+			$\overline{Q}_{F}^{N} = \{J_{sorted}(E), J_{sorted}(E + 1), ... J_{sorted}(N-1)\}$ \label{line:subblockRef4}
 		}
 	}
+	$frozenSize = \big|\overline{Q}_{F}^{N}\big|$ \;
+	$infoSize = N - frozenSize$ \;
+	$Q_{\textit{I}}^{\textit{N}} = Q_{\textit{0}}^{\textit{N-1}}$ \;
 	
-	\Else {
-	
-
-	
-	
+	\For{$i=0$ to $frozenSize$} {
+		$iterator = remove(Q_{\textit{I}}^{\textit{N}},\overline{Q}_{F,i})$ \;
+		$erase(Q_{\textit{I}}^{\textit{N}},iterator)$ \;
 	}
-	
-
+	$startIdxInfo = N - K - n_{PC}$ \;
+	$\overline{Q}_{\textit{I}}^{\textit{K}} = \{Q_{\textit{I,startIdxInfo}},Q_{\textit{I,startIdxInfo + 1}},...,Q_{\textit{I,END}}\}$
 	\caption{Polar code construction}
 	\label{algo:polarCodeConstuctionAlgo}
 \end{algorithm}
 \DecMargin{1.5em}
 
+Above algorithm shows how the information bit indices are selected, By taking rate matching also into account. Finding and removing incapable bits due to rate matching is an expensive operation. As can be seen in the algorithm at lines ~\ref{line:subblockRef1}, ~\ref{line:subblockRef2}, ~\ref{line:subblockRef3} and ~\ref{line:subblockRef4} subblock interleaving pattern also need to considered into account to identify the incapable bits due to the presence of subblock interleaver between rate matching and encoder. Due to presence of time consuming operations such as sorting, set\_union, search, remove and erase. Contribution of this function highest among all the components of FEC chain. In terms of latency, for a scenario with $E = 846, N = 1024, K = 130$ puncturing needs happen, for these parameters, polar code construction, encoding, subblock interleaving rate matching and channel interleaver takes 411us, only polar code construction contribution is \TODO{x us}. 
 
-Next block in the polar FEC chain, polar code construction. It is the step to identify where the information bits needs to be placed.
+Let's analyze the complexity of each operations. Complexity of sorting is $\mathcal{O}\big((N-E)\log{}(N-E)\big)$ and of set\_union is again $\mathcal{O}\big((N-E)\log{}(N-E)\big)$ complex. In polar FEC chain, block-length $N$ is derived using $E$ and $K$, so $(N-E)$ is very small compared to $N$. Next operation in the algorithm is $remove$ and $erase$. These functions are directly used from standard C++ library. After deciding shortening/puncturing and identifying incapable bit indices, these locations must frozen, This requires traversing through reliability array and removing these locations. $remove$ and $erase$ operations are called to perform this operation. $remove$ function searches through a reliability array and removes the element if it is frozen. $erase$ operations erases the memory allocated to removed element and resizes the array. Complexity of remove operation is $\mathcal{O}(N)$. $remove$ function has to search through all the elements of an array for every frozen value and have to move the elements to overwrite the removed position, Size of array is $N$, it can be as large as $1024$. Erase operation has to deallocate the memory and resize the container. $remove$ and $erase$ together are $\mathcal{O}\big(N^2\big)$ complex. Theoretical complexity analysis is supported from measurements of time taken by $remove$ and $erase$ functions. It is found to be \TODO{X $\mu$ s}. Avoiding these operations is critical to reduce the latency of FEC chain.
+
+In this work, algorithm is reformulated to avoid searching, copying and memory deallocation while removing frozen indices. To avoid search operations, a lookup table is built whose values indicate the position of particular reliability value. After identifying the position it is marked as removed instead of removing, to keep the same order of elements, so that same lookup table can be used for finding the next incapable bit index. Marking the value as removed instead of removing has additional advantages of avoiding memory deallocation and copying. After all the incapable bit indices are marked as removed, only the unmarked elements are considered for polar encoding.
+
+%Out of these positions information bits are placed in most reliable $K+n_{PC}$ positions.
+
+Next optimization is avoiding copying subblock interleaving pattern to frozen indices array in case of shortening. Instead a subblock interleaving pattern is directly used to mark the reliability indices as removed. In addition to above mentioned optimizations, minor ones such as avoiding dynamic memory allocation instead reserving in advance and employing pointer operations to avoid copying are performed. Finally information bit positions are obtained from iterating the reliability table from the end (since indices are sorted in ascending order of reliabilities) and extracting $K+n_{PC}$ unmarked positions. These optimizations significantly reduced the latency from \TODO{Y $\mu$ s} to \TODO{Y $\mu$ s}.
+
+Following algorithm presents the optimized reformulation of \ref{algo:polarCodeConstuctionAlgo}.
+
+\TODO{Add optimized algorithm here, Derive from the optimized polar code construction function}
+\TODO{Update the latency table with correct values}
+
+\begin{table}[h!]
+	\begin{center}
+		\caption{Information bit positions selection latency comparison}
+		\label{tab:codeConstrLatency}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Naive & Optimized \\
+			\hline
+			Latency ($\mu$s) & $411$ & $11$\\
+		\end{tabular}
+	\end{center}
+\end{table}
+
 \TODO{\newline Here explain the algorithm how frozen/information/parity indices are selected. With an algorithm and flow chart which makes very clear/easy to understand the algorithm. Explain the effect of puncturing and shortening on the bit reliability. May be mode should be selected, either as puncturing/shortening at constructor. And corresponding operations are performed accordingly. Give also the details about information bit insertion reliable locations. Explain the effect of puncturing and shortening on the reliability of bit channels.}
 
-
 \section{Polar Encoding}
-Explain how the matrix multiplication is transformed into recursive formulation. Represent the encoding procedure as traversing through binary tree. How the parallelism of SIMD processor is exploited speed up the encoding process. Explain the employed tree pruning method.
+\TODO{Explain how the matrix multiplication is transformed into recursive formulation. Represent the encoding procedure as traversing through binary tree. How the parallelism of SIMD processor is exploited speed up the encoding process. Explain the employed tree pruning method.}
+
+Once the information bit positions are identified, $K + n_{PC}$ bits of information and parity bits (if any) are inserted to reliable positions and remaining  $(N-K-n_{PC})$ are set to zero. Next step in the FEC chain is encoding. It is carried out by multiplying $N$-bit vector with a generator matrix obtained by the $n^{th}$ Kronecker power of Arikan matrix $k = \big[\begin{smallmatrix} 1 & 0 \\ 1 & 1 \end{smallmatrix}$\big]  where $n$ is such that $N = 2^{n}$. Direct matrix multiplication is 
+
+\section{Rate matching}
 
 \section{Results Comparison}
 

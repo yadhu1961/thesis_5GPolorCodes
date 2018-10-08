@@ -48,6 +48,7 @@
 	\RequirePackage{xcolor}
 	\RequirePackage[parfill]{parskip}
 	\RequirePackage[ruled,linesnumbered]{algorithm2e}
+	\RequirePackage{mathtools}
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}
