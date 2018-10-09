@@ -260,9 +260,41 @@ Pruning of the tree had a significant latency improvement, it can be better unde
 \newline
 Example of a pruned unrolled encoder containing also the tree traversal is shown in the figure ~\ref{fig:unrolledEncoder}. Inline function names for different bit vector size are also shown in the figure. One can see that tree traversing ends at $bitMult8$ function due to pruning. Tree traversal flow is represented with orange line in a figure.
 
-Sample code snippet of node operation with SIMD instructions is shown in a listing ~\ref{code:simdNodeOps}.
+Sample code snippet of node operation with SIMD instructions is shown in a listing.
 
-\begin{table}[]
+\begin{figure}[]
+	\centering
+	\includegraphics[width=0.7\textwidth]{./figures/unrolledEncoder.pdf}
+	\caption{Pruned unrolled encoder tree}
+	\label{fig:unrolledEncoder}
+\end{figure}
+
+\begin{figure}[]
+	\centering
+	\includegraphics[width=0.7\textwidth]{./figures/simd_code.pdf}
+	\caption{Node operation with SIMD}
+	\label{fig:simd_code_snippet}
+\end{figure}
+
+
+%\TODO{Convert this code to minted format}
+%\begin{lstlisting}
+%inline void bitMultG512(uint8_t *s, uint8_t *dEncoded) 
+%{
+%  //Here s is 64 bytes, Divided to 32 bytes each.
+%  uint8_t *s1 = (uint8_t *) s;
+%  uint8_t *s2 = (uint8_t *) (s + 32);
+%  __m256i result;
+%  __m256i temp1 = _mm256_loadu_si256((__m256i*)operand1);
+%  __m256i temp2 = _mm256_loadu_si256((__m256i*)operand2);
+%  result = _mm256_xor_si256(temp1,temp2);
+%  _mm256_storeu_si256((__m256i*)destn, result);
+%  bitMultG256((uint8_t *) s1, dEncoded);
+%  bitMultG256((uint8_t *) s2, dEncoded);
+%}
+%\end{lstlisting}
+
+\begin{table}[!h]
 	\begin{center}
 		\caption{Latency comparison: polar encoding for 1024 bits}
 		\label{tab:polarEncoder}
@@ -274,34 +306,46 @@ Sample code snippet of node operation with SIMD instructions is shown in a listi
 	\end{center}
 \end{table}
 
-\begin{figure}[]
-	\centering
-	\includegraphics[width=0.7\textwidth]{./figures/unrolledEncoder.pdf}
-	\caption{Pruned unrolled encoder tree}
-	\label{fig:unrolledEncoder}
-\end{figure}
-
-\begin{lstlisting}
-inline void bitMultG512(uint8_t *s, uint8_t *dEncoded) 
-{
-  //Here s is 64 bytes, Divided to 32 bytes each.
-  uint8_t *s1 = (uint8_t *) s;
-  uint8_t *s2 = (uint8_t *) (s + 32);
-  __m256i result;
-  __m256i temp1 = _mm256_loadu_si256((__m256i*)operand1);
-  __m256i temp2 = _mm256_loadu_si256((__m256i*)operand2);
-  result = _mm256_xor_si256(temp1,temp2);
-  _mm256_storeu_si256((__m256i*)destn, result);
-  bitMultG256((uint8_t *) s1, dEncoded);
-  bitMultG256((uint8_t *) s2, dEncoded);
-}
-\caption{SIMD implementation of node operation in a encoder tree}
-\label{code:simdNodeOps}
-\end{lstlisting}
-
 \section{Rate matching}
+\TODO{Nothing much for now, May be subblock interleaver can be optimized to reduce the latency by 10us in rate matching process}
+
+\section{Miscellaneous Optimization}
+Avoiding multiplication/division and modulus operations and achieving the same using bitwise operations.
+Implemented approximate versions $log_{2}x$ and exponential functions to reduce the number of floating point multiplications.
+Avoided jump functions to avoid flushing of the instruction pipeline.
+Using the compiler optimization primitives to reduce the branches in the program.
 
 \section{Results Comparison}
+
+\subsubsection{PDCCH FEC chain}
+Parameters of the FEC chain are n\_max = 9, I\_IL = 1, n\_pc = 0, n\_pc\_wm = 0, I\_BIL = 0, L = 24, E = 423, K = 106.
+This is not the worst case, These are the values for parameters specified above.
+\begin{table}[!h]
+	\begin{center}
+		\caption{Latency comparison: PDCCH FEC chain}
+		\label{tab:pdcchFecChain}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Functional & Optimized \\
+			\hline
+			Latency ($\mu$s) & $194$ & $20$\\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\subsubsection{PBCH FEC chain}
+Parameters of the FEC chain are n\_max = 9, I\_IL = 1, n\_pc = 0, n\_pc\_wm = 0, I\_BIL = 0, L = 24, E = 864, K = 32.
+This is not the worst case, These are the values for parameters specified above.
+\begin{table}[!h]
+	\begin{center}
+		\caption{Latency comparison: PDCCH FEC chain}
+		\label{tab:pdcchFecChain}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Functional & Optimized \\
+			\hline
+			Latency ($\mu$s) & $43$ & $7$\\
+		\end{tabular}
+	\end{center}
+\end{table}
 
 
 
