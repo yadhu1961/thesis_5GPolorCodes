@@ -262,37 +262,29 @@ Example of a pruned unrolled encoder containing also the tree traversal is shown
 
 Sample code snippet of node operation with SIMD instructions is shown in a listing.
 
-\begin{figure}[]
+\begin{figure}[!h]
 	\centering
 	\includegraphics[width=0.7\textwidth]{./figures/unrolledEncoder.pdf}
 	\caption{Pruned unrolled encoder tree}
 	\label{fig:unrolledEncoder}
 \end{figure}
 
-\begin{figure}[]
-	\centering
-	\includegraphics[width=0.7\textwidth]{./figures/simd_code.pdf}
-	\caption{Node operation with SIMD}
-	\label{fig:simd_code_snippet}
-\end{figure}
-
-
 %\TODO{Convert this code to minted format}
-%\begin{lstlisting}
-%inline void bitMultG512(uint8_t *s, uint8_t *dEncoded) 
-%{
-%  //Here s is 64 bytes, Divided to 32 bytes each.
-%  uint8_t *s1 = (uint8_t *) s;
-%  uint8_t *s2 = (uint8_t *) (s + 32);
-%  __m256i result;
-%  __m256i temp1 = _mm256_loadu_si256((__m256i*)operand1);
-%  __m256i temp2 = _mm256_loadu_si256((__m256i*)operand2);
-%  result = _mm256_xor_si256(temp1,temp2);
-%  _mm256_storeu_si256((__m256i*)destn, result);
-%  bitMultG256((uint8_t *) s1, dEncoded);
-%  bitMultG256((uint8_t *) s2, dEncoded);
-%}
-%\end{lstlisting}
+\begin{minted}{c}
+inline void bitMultG512(uint8_t *s, uint8_t *dEncoded) 
+{
+	//Here s is 64 bytes, Divided to 32 bytes each.
+	uint8_t *s1 = (uint8_t *) s;
+	uint8_t *s2 = (uint8_t *) (s + 32);
+	__m256i result;
+	__m256i temp1 = _mm256_loadu_si256((__m256i*)operand1);
+	__m256i temp2 = _mm256_loadu_si256((__m256i*)operand2);
+	result = _mm256_xor_si256(temp1,temp2);
+	_mm256_storeu_si256((__m256i*)destn, result);
+	bitMultG256((uint8_t *) s1, dEncoded);
+	bitMultG256((uint8_t *) s2, dEncoded);
+}
+\end{minted}
 
 \begin{table}[!h]
 	\begin{center}
@@ -307,7 +299,7 @@ Sample code snippet of node operation with SIMD instructions is shown in a listi
 \end{table}
 
 \section{Rate matching}
-\TODO{Nothing much for now, May be subblock interleaver can be optimized to reduce the latency by 10us in rate matching process}
+\TODO{Nothing significant for now, Only minor optimizations, May be subblock interleaver can be optimized to reduce the latency by 10us in rate matching process}
 
 \section{Miscellaneous Optimization}
 Avoiding multiplication/division and modulus operations and achieving the same using bitwise operations.
