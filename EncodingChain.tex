@@ -209,17 +209,17 @@ Following algorithm presents the optimized reformulation of \ref{algo:polarCodeC
 
 Once the information bit positions are identified, $K + n_{PC}$ bits of information and parity bits (if any) are inserted to reliable positions and remaining  $(N-K-n_{PC})$ are set to zero. Next step in the FEC chain is encoding. It can be carried out by multiplying $N$-bit vector with a generator matrix obtained by the $n^{th}$ kronecker power of Arikan matrix $k = \big[\begin{smallmatrix} 1 & 0 \\ 1 & 1 \end{smallmatrix}$\big]  where $n$ is such that $N = 2^{n}$. State of the art direct row vector multiplication with matrix algorithm is $\mathcal{O}\big(N^{2}\big)$ complex \cite{MatrixMultComplexity}. However in case of polar codes generator matrix follows a regular structure, hence it is shown that encoding can be reduced recursive structure with a complexity of $\mathcal{O}(N\log{}N)$. \TODO{cite which says nlogn complexity} There are different ways to visualize encoding process, one is circuit or tree structure. The latter is suitable when encoding is performed in hardware where group of bits processed in parallel. Since this work focuses on implementation/optimization for software, tree structure is considered. Example encoding visualized as a binary tree for $N = 8$ is illustrated in a figure ~\ref{fig:treeEncoding}. Every node in a tree splits $i$-bit to $i/2$-bit vector and performs XOR of $0$ to $\frac{i}{2}-1$ bits with $\frac{i}{2}$ to $i-1$ bits. This process continues till bit vector length becomes one.
 
-\begin{figure}[!htb]
+\begin{figure}[]
 	\centering
 	\includegraphics[width=0.7\textwidth]{./figures/treeEncoding.pdf}
 	\caption{Encoding tree}
 	\label{fig:treeEncoding}
 \end{figure}
 
-As it can be observed from the tree, same operation is performed at every node only the size of a vector is different, due to the regular structure encoding problem fits the recursive algorithmic form. Algorithm in ~\ref{algo:polarEncoder} shows a naive implementation of recursive encoder. In the algorithm shown in ~\ref{algo:polarEncoder} each bit is represented a one integer.
+As it can be observed from the tree, same operation is performed at every node only the size of a vector is different, due to the regular structure encoding problem fits the recursive algorithmic form. Algorithm in ~\ref{algo:polarEncoder} shows a naive implementation of recursive encoder. In the algorithm shown in ~\ref{algo:polarEncoder} each bit is represented a one integer, hence each bit is processed serially parallelism is not exploited. Upon profiling the implementation it also identified that ~\ref{line:copying1} and ~\ref{line:copying2} are also the bottlenecks since copying is involved. One more issue with the algorithm in ~\ref{algo:polarEncoder} is the recursive implementation. Although the encoding can be easily implemented with this algorithm, each recursive function call in software is expensive, since it requires a new stack frame to be allocated each time.
 
 \IncMargin{1.5em}
-\begin{algorithm}[H]
+\begin{algorithm}[]
 	\KwData{$u_{\textit{0}}^{\textit{N-1}}$,$N$,$dIndex = 0$}
 	\KwResult{$y_{\textit{0}}^{\textit{N-1}}$}
 	\SetKwFunction{FMain}{recursiveEncode}
@@ -232,11 +232,11 @@ As it can be observed from the tree, same operation is performed at every node o
 			$len = \frac{l}{2}$ \;
 			$P_{\textit{0}}^{\textit{len-1}}$ = $u_{\textit{0}}^{\textit{len-1}}$ \; 	\label{line:copying1}
 			$Q_{\textit{0}}^{\textit{len-1}} = u_{\textit{len}}^{\textit{l-1}}$ \;		\label{line:copying2}
-
+			
 			\For{$i=0$ to $length-1$} {													\label{line:xor1}
 				$P_{\textit{i}} = P_{\textit{i}} \oplus Q_{\textit{i}}$\;				\label{line:xor2}
 			}
-
+			
 			\FMain{$P_{\textit{0}}^{\textit{len-1}}$,$len$} \;
 			\FMain{$Q_{\textit{0}}^{\textit{len-1}}$,$len$}	\;
 		}
@@ -245,6 +245,59 @@ As it can be observed from the tree, same operation is performed at every node o
 	\label{algo:polarEncoder}	
 \end{algorithm}
 \DecMargin{1.5em}
+
+To avoid the disadvantages mentioned above, following optimization techniques are considered.
+
+$\bullet$ \textbf{Parallel processing:} To avoid the serial processing of bits and for improving the parallelism factor, method described in section ~\ref{dataPackUnpack} is used, i.e is multiple bits are packed to single integer, in this particular instance, every 64 bits of are packed into 64-bit integers so that 64-bits can be processed in parallel with 64-bit supported processor, which results in a parallelism factor ($\mathcal{P}$) of 64. Packing also helps to further increase the parallelism factor $\mathcal{P}$ with state of the art SIMD processing units of the modern processors. SIMD instructions can process of 256-bit or 128-bit in a single instruction which results in a parallelism factor ($\mathcal{P}$) of 256 with AVX and 128 with SSE instructions. \newline
+\newline
+$\bullet$ \textbf{Avoiding the copy operations:} Naive algorithm in ~\ref{algo:polarEncoder} splits the of $N$-bits into two $\frac{N}{2}$-bit vectors and copies them temporarily allocated variables. Code profiling pointed out that these copying operations are the bottlenecks. In optimized algorithm, instead of copying, C++ pointers concept is used to calculate the index where next block of vector starts and this index is passed to next node for further processing. \newline
+\newline
+$\bullet$ \textbf{Unrolling the encoder:} Recursive implementation has significant overhead due to the huge number of recursive function calls which require new stack frame allocation. To avoid this overhead, encoder implementation is unrolled, in other words, new inline functions are defined for each vector size. Advantages of these functions is that they don't won't require new stack frame to be allocated when an inline function is called, they will make use of stack frame from which they are called. However this requires a separate inline function for every vector size. Having a different function for every vector size also has advantages, which allows us to use SIMD instructions whenever vector size can fit SIMD registers otherwise normal instructions can be used. \newline
+\newline
+$\bullet$ \textbf{Pruning encoder tree:} As shown in the figure ~\ref{fig:treeEncoding}, encoding process can be represented as traversal of a binary tree. When an encoding is implemented in software, when traversing the tree towards leaf nodes, bit vector size can becomes less than 8 bits, which requires accessing 4/2/1 bits of an integer. In standard processors smallest unit which can be accessed is an 8-bit integer. To access 4/2/1 bits masking operations are needed. Since the nodes in a binary tree which access 4,2,1 bits is huge, significant number of masking operations are needed, which introduces a added overhead. Pruning of tree at level where the bit vector size is 8, avoids this overhead in addition to reducing the number of nodes to be traversed in a binary tree. Pruning is done by building a lookup table containing encoded value for every combination of 8-bit vector and reading the value from lookup table for the encoded value when the bit vector size is 8. Lookup table will contain 256 bytes, containing encoded value for every combination of 8-bit vector.\newline
+\newline
+Pruning of the tree had a significant latency improvement, it can be better understood by taking an example. In a scenario where $N = 1024$, with unpruned tree number of nodes to be traversed for encoding is 2047 nodes, out of these nodes contain 1024 1-bit, 512 2-bit and 256 4-bit nodes. With pruned tree 4/2/1 bit nodes are not present, number of nodes to be traversed reduces to 255 from 2047. Pruning avoids masking operations as well as tree traversal. \newline
+\newline
+Example of a pruned unrolled encoder containing also the tree traversal is shown in the figure ~\ref{fig:unrolledEncoder}. Inline function names for different bit vector size are also shown in the figure. One can see that tree traversing ends at $bitMult8$ function due to pruning. Tree traversal flow is represented with orange line in a figure.
+
+Sample code snippet of node operation with SIMD instructions is shown in a listing ~\ref{code:simdNodeOps}.
+
+\begin{table}[]
+	\begin{center}
+		\caption{Latency comparison: polar encoding for 1024 bits}
+		\label{tab:polarEncoder}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Naive & Optimized \\
+			\hline
+			Latency ($\mu$s) & $34$ & $0.244$\\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\begin{figure}[]
+	\centering
+	\includegraphics[width=0.7\textwidth]{./figures/unrolledEncoder.pdf}
+	\caption{Pruned unrolled encoder tree}
+	\label{fig:unrolledEncoder}
+\end{figure}
+
+\begin{lstlisting}
+inline void bitMultG512(uint8_t *s, uint8_t *dEncoded) 
+{
+  //Here s is 64 bytes, Divided to 32 bytes each.
+  uint8_t *s1 = (uint8_t *) s;
+  uint8_t *s2 = (uint8_t *) (s + 32);
+  __m256i result;
+  __m256i temp1 = _mm256_loadu_si256((__m256i*)operand1);
+  __m256i temp2 = _mm256_loadu_si256((__m256i*)operand2);
+  result = _mm256_xor_si256(temp1,temp2);
+  _mm256_storeu_si256((__m256i*)destn, result);
+  bitMultG256((uint8_t *) s1, dEncoded);
+  bitMultG256((uint8_t *) s2, dEncoded);
+}
+\caption{SIMD implementation of node operation in a encoder tree}
+\label{code:simdNodeOps}
+\end{lstlisting}
 
 \section{Rate matching}
 

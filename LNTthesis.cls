@@ -45,6 +45,8 @@
 	\RequirePackage{varwidth}		%Yadhu added
 	\RequirePackage{enumitem}		%Yadhu added for bullets
 	\RequirePackage{Listings}		%Yadhu added for code snippets
+	%\RequirePackage{minted}		%Yadhu added for code snippets
+	%\RequirePackage{pygmentize}	% For minted
 	\RequirePackage{xcolor}
 	\RequirePackage[parfill]{parskip}
 	\RequirePackage[ruled,linesnumbered]{algorithm2e}
