@@ -75,7 +75,7 @@ Some examples of these instructions are:
 
 \TODO{May be give examples code snippet which packs and unpacks bits in an efficient manner.}
 
-\TODO{cite to agner fog optimization manuals. \cite{AgnerFog} , \cite{DeltaFunction}}
+\TODO{cite to agner fog optimization manuals. \cite{AgnerFog}}
 
 \section{CRC calculation}
 %Explain why CRC attachment is considered in whole FEC chain, how it is useful for decoding polar codes. Explain algorithmic complexity of CRC calculation, How much time it was taking, How the optimization is carried out to reduce the CRC calculation time.
@@ -190,9 +190,9 @@ Following algorithm presents the optimized reformulation of \ref{algo:polarCodeC
 \TODO{Add optimized algorithm here, Derive from the optimized polar code construction function}
 \TODO{Update the latency table with correct values}
 
-\begin{table}[h!]
+\begin{table}[]
 	\begin{center}
-		\caption{Information bit positions selection latency comparison}
+		\caption{Latency comparison: Information bit positions selection}
 		\label{tab:codeConstrLatency}
 		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
 			\textbf{ } & Naive & Optimized \\
@@ -207,7 +207,44 @@ Following algorithm presents the optimized reformulation of \ref{algo:polarCodeC
 \section{Polar Encoding}
 \TODO{Explain how the matrix multiplication is transformed into recursive formulation. Represent the encoding procedure as traversing through binary tree. How the parallelism of SIMD processor is exploited speed up the encoding process. Explain the employed tree pruning method.}
 
-Once the information bit positions are identified, $K + n_{PC}$ bits of information and parity bits (if any) are inserted to reliable positions and remaining  $(N-K-n_{PC})$ are set to zero. Next step in the FEC chain is encoding. It is carried out by multiplying $N$-bit vector with a generator matrix obtained by the $n^{th}$ Kronecker power of Arikan matrix $k = \big[\begin{smallmatrix} 1 & 0 \\ 1 & 1 \end{smallmatrix}$\big]  where $n$ is such that $N = 2^{n}$. Direct matrix multiplication is 
+Once the information bit positions are identified, $K + n_{PC}$ bits of information and parity bits (if any) are inserted to reliable positions and remaining  $(N-K-n_{PC})$ are set to zero. Next step in the FEC chain is encoding. It can be carried out by multiplying $N$-bit vector with a generator matrix obtained by the $n^{th}$ kronecker power of Arikan matrix $k = \big[\begin{smallmatrix} 1 & 0 \\ 1 & 1 \end{smallmatrix}$\big]  where $n$ is such that $N = 2^{n}$. State of the art direct row vector multiplication with matrix algorithm is $\mathcal{O}\big(N^{2}\big)$ complex \cite{MatrixMultComplexity}. However in case of polar codes generator matrix follows a regular structure, hence it is shown that encoding can be reduced recursive structure with a complexity of $\mathcal{O}(N\log{}N)$. \TODO{cite which says nlogn complexity} There are different ways to visualize encoding process, one is circuit or tree structure. The latter is suitable when encoding is performed in hardware where group of bits processed in parallel. Since this work focuses on implementation/optimization for software, tree structure is considered. Example encoding visualized as a binary tree for $N = 8$ is illustrated in a figure ~\ref{fig:treeEncoding}. Every node in a tree splits $i$-bit to $i/2$-bit vector and performs XOR of $0$ to $\frac{i}{2}-1$ bits with $\frac{i}{2}$ to $i-1$ bits. This process continues till bit vector length becomes one.
+
+\begin{figure}[!htb]
+	\centering
+	\includegraphics[width=0.7\textwidth]{./figures/treeEncoding.pdf}
+	\caption{Encoding tree}
+	\label{fig:treeEncoding}
+\end{figure}
+
+As it can be observed from the tree, same operation is performed at every node only the size of a vector is different, due to the regular structure encoding problem fits the recursive algorithmic form. Algorithm in ~\ref{algo:polarEncoder} shows a naive implementation of recursive encoder. In the algorithm shown in ~\ref{algo:polarEncoder} each bit is represented a one integer.
+
+\IncMargin{1.5em}
+\begin{algorithm}[H]
+	\KwData{$u_{\textit{0}}^{\textit{N-1}}$,$N$,$dIndex = 0$}
+	\KwResult{$y_{\textit{0}}^{\textit{N-1}}$}
+	\SetKwFunction{FMain}{recursiveEncode}
+	\SetKwProg{Fn}{function}{:}{}
+	\Fn{\FMain{$u_{\textit{0}}^{\textit{l-1}}$,$l$}}{
+		\If {$l == 1$} {
+			$y_{dIndex} = u_{0}$ \;
+			$dIndex = dIndex + 1$ \;
+		} \Else {
+			$len = \frac{l}{2}$ \;
+			$P_{\textit{0}}^{\textit{len-1}}$ = $u_{\textit{0}}^{\textit{len-1}}$ \; 	\label{line:copying1}
+			$Q_{\textit{0}}^{\textit{len-1}} = u_{\textit{len}}^{\textit{l-1}}$ \;		\label{line:copying2}
+
+			\For{$i=0$ to $length-1$} {													\label{line:xor1}
+				$P_{\textit{i}} = P_{\textit{i}} \oplus Q_{\textit{i}}$\;				\label{line:xor2}
+			}
+
+			\FMain{$P_{\textit{0}}^{\textit{len-1}}$,$len$} \;
+			\FMain{$Q_{\textit{0}}^{\textit{len-1}}$,$len$}	\;
+		}
+	}
+	\caption{Naive polar encoder}
+	\label{algo:polarEncoder}	
+\end{algorithm}
+\DecMargin{1.5em}
 
 \section{Rate matching}
 
