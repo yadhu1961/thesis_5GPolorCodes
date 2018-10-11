@@ -66,12 +66,12 @@ Typically in software implementations, for clarity and ease implementation each 
 To avoid these disadvantages and to enable data parallelism, this implementation of encoder tries to pack the multiple information bits to one integer. Although packing information bits to single integer has advantages, for some operations such as bit wise interleaving accessing each bit efficiently is very important. To exploit the advantages of bit packing as well as the advantages of each bit as integer, it is necessary to convert between the two. This is where the power of SIMD instructions in modern processors come to rescue. These processors come with special hardware instructions which help to efficiently pack and unpack data. Information bits are used in packed format when data parallelism needs to exploited and in unpacked format when certain operations require bits to accessed individually. These pack/unpack instructions are very efficient with low latency.
 
 Some examples of these instructions are:
-\begin{lstlisting}
+\begin{minted}{c}
 	int _mm_movemask_pi8(__m64 a);
 	int _mm_movemask_epi8(__m128i a);
 	__m256i _mm256_unpackhi_epi8(__m256i a, __m256i b);
 	/** many more **/
-\end{lstlisting}
+\end{minted}
 
 \TODO{May be give examples code snippet which packs and unpacks bits in an efficient manner.}
 
@@ -319,10 +319,12 @@ This is not the worst case, These are the values for parameters specified above.
 		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
 			\textbf{ } & Functional & Optimized \\
 			\hline
-			Latency ($\mu$s) & $194$ & $20$\\
+			Latency ($\mu$s) & $162$ & $19$\\
 		\end{tabular}
 	\end{center}
 \end{table}
+
+\NOTE{PBCH with google benchmark naive = 104us, Optimized = 7.2us, Google benchmark gives reliable reproducible numbers}
 
 \subsubsection{PBCH FEC chain}
 Parameters of the FEC chain are n\_max = 9, I\_IL = 1, n\_pc = 0, n\_pc\_wm = 0, I\_BIL = 0, L = 24, E = 864, K = 32.
@@ -330,18 +332,21 @@ This is not the worst case, These are the values for parameters specified above.
 \begin{table}[!h]
 	\begin{center}
 		\caption{Latency comparison: PDCCH FEC chain}
-		\label{tab:pdcchFecChain}
+		\label{tab:pbchFecChain}
 		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
 			\textbf{ } & Functional & Optimized \\
 			\hline
-			Latency ($\mu$s) & $43$ & $7$\\
+			Latency ($\mu$s) & $53$ & $7$\\
 		\end{tabular}
 	\end{center}
 \end{table}
 
+\NOTE{PBCH with google benchmark naive = 30us, Optimized = 2.3us, Google benchmark gives reliable reproducible numbers}
+
 
 Worst case latency was for the parameters, 
-I\_IL = 1, n\_max = 10, n\_pc = 0 ,n\_pc\_wm = 0, I\_BIL = 0, E = 846, K = 106;
+I\_IL = 1, n\_max = 10, n\_pc = 0 ,n\_pc\_wm = 0, I\_BIL = 1, E = 846, K = 106
+Naive 451us, Optimized 40us.
 
 
 
