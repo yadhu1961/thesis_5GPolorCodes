@@ -1,40 +1,50 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Decoding FEC Chain} \label{chap:DecodingChain}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-In 5G Polar FEC chain, decoder is the critical part due to inherent sequential nature of polar decoding. $n^{th}$ bit is decoded by using all the previously decoded bits, hence $n^{th}$ bit depends on $0$ to $n-1$ bits. Due to sequential decoding process, significant latency is introduced by the decoder. This section presents the optimization techniques employed to improve the latency, which include both algorithmic and platform specific optimizations. Each these techniques are explained in the respective sections where these are employed. Polar decoder FEC chain is present at the receiver side. In this work, FEC chain considered is part of the base station therefore uplink control data is decoded at receiver. PUCCH (Physical uplink control channel) and PUSCH (Physical uplink shared channel) contain polar encoded information. Received signal after demodulation is quantized to 16-bit LLR (log likelihood ratio) values. Decoding is performed with LLR (Log likelihood ratio) values rather than probabilistic likelihoods due to their numerical stability and low computational complexity. Receiver side FEC chain is a reverse of the operations performed at transmitter. Figure ~\ref{fig:5grx_fec_chain} shows the receiver side polar decoding FEC chain.
+In this chapter, implementation and optimization details of 5G polar decoding FEC are presented including challenges faced while achieving low latency decoding. In FEC chain, decoder is the critical part due to inherent sequential nature of polar decoding. $n^{th}$ bit is decoded by using all the previously decoded bits, hence $n^{th}$ bit depends on $0$ to $n-1$ bits. Due to sequential decoding process, significant latency is introduced by the decoder. This section presents the optimization techniques employed to improve the latency, which include both algorithmic and platform specific optimizations. Each these techniques are explained in the respective sections where these are employed. In this work, FEC chain considered is part of the base station, therefore uplink control information is decoded at receiver. PUCCH (Physical uplink control channel) and PUSCH (Physical uplink shared channel) contain polar encoded information. Received signal after demodulation is quantized to 16-bit LLR (log likelihood ratio) values. Decoding is performed with LLR (Log likelihood ratio) values rather than probabilistic likelihoods due to their numerical stability and low computational complexity. Receiver side FEC chain is a reverse of the operations performed at transmitter. Figure ~\ref{fig:5grx_fec_chain} shows the receiver side polar decoding FEC chain.
+
 \begin{figure}[]
 	\centering
 	\includegraphics[width=0.7\textwidth]{./figures/receiverFECChain.pdf}
 	\caption{Polar decoding FEC chain for PUCCH/PUSCH}
 	\label{fig:5grx_fec_chain}
 \end{figure}
+
 %$\mathtt{Yadhu}$
 %\NOTE{Decoding is of serial nature, has lot of latency. Polar decoding chain necessity. PUCCH and PUSCH, parameters of both the channels.}
 %%	Explain all the decoding Optimizations I have done, In this document.
 %% 	Explain of the latency without optimization.
+
 \section{Decoding algorithms}
-The basic decoding algorithm successive cancellation (SC) is developed by the Arikan in his seminal work on polar codes \cite{Arikan}. It achieves the symmetrical capacity of binary memoryless channel through sequential decoding when block length is very large. However due to the sequential nature significant latency is introduced by decoding algorithm. Latest 5G standard specifies transmission time interval (TTI) of $125 \mu s$ \TODO{cite the doc}, within this duration scheduling and encoding/decoding must be done. Therefore it is very important to efficiently perform FEC chain operations. This work concentrates on implementing the polar encoding/decoding in software and studies the feasibility of satisfying the strict latency requirements of 5G.
+The basic decoding algorithm successive cancellation (SC) is developed by the Arikan in his seminal work on polar codes \cite{Arikan}. It achieves the symmetrical capacity of binary memoryless channel through sequential decoding when block length is very large. However due to the sequential nature significant latency is introduced by decoding algorithm. Latest 5G standard specifies transmission time interval (TTI) of $125 \mu s$ \TODO{cite the doc}, within this duration scheduling and encoding/decoding must be done. Therefore it is very important to efficiently perform FEC chain operations. This work concentrates on implementing the polar encoding/decoding in software and studies the feasibility of satisfying the strict latency requirements of 5G. Decoding through SC algorithm can be represented as binary tree, decoding process is nothing but traversing through a tree sequentially. Significant research work is done both in academia and industry to improve decoding latency of the SC algorithm. Major improvement to SC which significantly reduced the decoding latency is identifying special kind nodes in a tree which allow immediate decoding of multiple bits without requiring full tree traversal. Algorithms presented in \cite{SSC} and \cite{fastSSC} present such improvements, which identify special nodes or in other words component codes such as \textit{Rate-0}, \textit{Rate-1}, \textit{RPC} and \textit{SPC} nodes, \textit{RPC} and \textit{SPC} mean repetition and single parity check code respectively. Identification of special nodes requires finding particular patterns the frozen bit locations in the constructed polar code. To gain full advantages of Fast-SSC (Fast Simplified Successive Cancellation) algorithm, special nodes must be identified efficiently. In this work, 5G RX FEC chain with fast-SSC algorithm implemented/optimized in software and feasibility of achieving desired latency( $< 50\mu s$) is analyzed.
+%Following sections present how processor specific features are exploited to efficiently identify
+
 
 \section{Decoding chain}
-
-\section{Sub-block de-interleaver}
-
-\section{Inverse rate matching}
+The figure ~\ref{fig:5grx_fec_chain} shows the complete receiver side FEC chain. It is almost a inverse operations of encoding FEC chain except few differences related to PUCCH and PDSCH which contain parity check bits ($ n_{PC} $). The decoding FEC chain receives UCI(Uplink Control Information) in the form of 16-bit quantized $ E $ LLR values. Before passing LLR values to decoder inverse operations of the steps which were carried out aftermath of encoding, which are channel deinterleaving, inverse rate matching and subblock deinterleaving. These steps grouped by a pink rectangle in the figure, after these steps polar code construction is performed using same optimized method as presented in the previous chapter. Polar code construction procedure outputs the information bit positions, from which frozen pattern can be obtained. Next step in the FEC chain is polar decoding, $ N $ LLR values and frozen pattern is passed to polar decoder, which outputs the decoded bits. Polar construction and decoding blocks are colored green the FEC chain figure. Using information bit positions obtained in the polar construction procedure $ K + n_{PC} + L $ bits are extracted from $ N $ decoded bits. $ K + n_{PC} + L $ bits contain $ n_{PC} $ parity bits, extracting these bits requires identifying the row of minimum weight from the generator matrix of polar code. Finally input deinterleaving is applied on the remaining $ K +  L $ bits to obtain concatenated information and CRC bits. Blocks representing Extracting parity bits and input bit deinterleaver are grouped with blue rectangle. In this section, we presented briefly the functionalities carried out by different blocks of the decoding FEC chain. Next we will analyze the latency contributions of each those operations and come up with optimizations both algorithmic and platform specific to reduce latency.
 
 \section{Channel deinterlever}
 
+\section{Inverse rate matching}
+
+\section{Sub-block de-interleaver}
+
 \section{Decoder optimization}
 
-\subsubsection{Bit packing frozen pattern}
+\subsection{Identifying component codes}
 How different kind of sub code types are identified efficiently using with bit packed frozen bits.
 
-\subsubsection{Decoding Rate-1 code}
+\subsection{Decoding Rate-0 code}
 
-\subsubsection{Decoding SPC code}
+\subsection{Decoding Rate-1 code}
+
+\subsection{Decoding RPC code}
+
+\subsection{Decoding SPC code}
 
 \section{Extract Info Bits}
 Means select information bits from the reliable positions.
 
-\section{Remove parity check bits}
+\section{Extract parity check bits}
 
 
