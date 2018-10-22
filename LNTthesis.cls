@@ -44,12 +44,13 @@
 %    \RequirePackage{titlesec}		%Yadhu added
 %	\RequirePackage{varwidth}		%Yadhu added
 	\RequirePackage{enumitem}		%Yadhu added for bullets
-	\RequirePackage[cache=false]{minted}		%Yadhu added for code snippets
+	\RequirePackage[newfloat]{minted}		%Yadhu added for code snippets
 %	\RequirePackage{pygmentize}	% For minted
 	\RequirePackage{xcolor}
 %	\RequirePackage[parfill]{parskip}
 	\RequirePackage[ruled,linesnumbered]{algorithm2e}
 	\RequirePackage{mathtools}
+	\RequirePackage{caption}
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}
