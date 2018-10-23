@@ -107,32 +107,127 @@ void subblockdeInterleaver( vector<int16_t> &y, vector<int16_t> &d) const
 Results Latency optimization for subblock deinterleaver $N = 1024$
 before 19.7us, after 0.47us 
 
+\section{Decoder optimization}
+
 \subsection{Identifying component codes}
 %How different kind of sub code types are identified efficiently using with bit packed frozen bits.
-As explained in the beginning of this chapter, naive SC algorithm purely sequential, hence decoder introduces significant latency in the FEC chain. With improvements such as \cite{fastSSC} and \cite{SSC} decoding tree can be pruned by identifying particular patterns in frozen bit positions. Pruning of a tree allows decoding multiple bits in parallel. Component codes out of polar codes can be identified which allow decoding without traversing the full decoder tree. Authors in \cite{SSC} and \cite{fastSSC} identify four such codes namely rate-0, rate-1, repetition and single parity codes. Decoding a code word through component codes improves latency without compromising the error correction performance. However to fully enjoy the fruits decoding tree pruning, implementation should be able identify component codes efficiently. One simple functional way is to go through all frozen bits and search by comparing with predefined patterns. Naive way of searching for a pattern introduces significant latency in the decoding process. Processors with \textit{AVX} and \textit{AVX2} support contain registers which can store 256/128 bits in a single register. Frozen pattern array/vector contain either one or zero, one indicating frozen bit and zero information bit. Since one bit is enough to represent type of bit position, frozen pattern can be stored by packing multiple bits type information to single 256bit register which allows identifying a pattern by comparing with a integer using single SIMD instruction. As an example with a mother code size $N=256$ information about which position is frozen and which is not can stored in a single 256 bit SIMD register in a bit packed format. To check whether it is a rate-0, rate-1, SPC or RPC requires one SIMD comparison instruction. Snippet in a listing ~\ref{code:rateOneSIMDComparison} illustrates an example of identifying for all zero in bitpacked frozen bits pattern.
+As explained in the beginning of this chapter, naive SC algorithm purely sequential, hence decoder introduces significant latency in the FEC chain. With improvements such as \cite{fastSSC} and \cite{SSC} decoding tree can be pruned by identifying particular patterns in frozen bit positions. Pruning of a tree allows decoding multiple bits in parallel. Component codes out of polar codes can be identified which allow decoding without traversing the full decoder tree. Authors in \cite{SSC} and \cite{fastSSC} identify four such codes namely rate-0, rate-1, repetition and single parity codes. Decoding a code word through component codes improves latency without compromising the error correction performance. However to fully enjoy the fruits decoding tree pruning, implementation should be able identify component codes efficiently. One simple functional way is to go through all frozen bits and search by comparing with predefined patterns. Naive way of searching for a pattern introduces significant latency in the decoding process. Processors with \textit{AVX} and \textit{AVX2} support contain registers which can store 256/128 bits in a single register. Frozen pattern array/vector contain either one or zero, one indicating frozen bit and zero information bit. Since one bit is enough to represent type of bit position, frozen pattern can be stored by packing multiple bits type information to single 256bit register which allows identifying a pattern by comparing with a integer using single SIMD instruction. As an example with a mother code size $N=256$ information about which position is frozen and which is not can stored in a single 256 bit SIMD register in a bit packed format. To check whether it is a rate-0, rate-1, SPC or RPC requires one SIMD comparison instruction. Snippet in a listing ~\ref{code:rateOneSIMDComparison} illustrates an example of identifying node type in bitpacked frozen bits pattern.
 
 \begin{code}
 	\captionof{listing}{Check for a rate-1 subcode}
 	\label{code:rateOneSIMDComparison}
 	\begin{minted}{c++}
 template<>
-inline int isRateOneCode<256>(uint64_t s[]) {
+inline int identify_pattern<256>(uint64_t s[],nodeType node) {
 	__m256i temp1 = _mm256_loadu_si256 ((__m256i*)s);
-	//Filling whole vector with zero's
-	__m256i temp2 = _mm256_set1_epi8(0);
-	uint8_t result = (uint8_t)_mm256_cmpeq_epi64 (temp1, temp2)[0];
-	return result;
+	__m256i temp2;
+	switch(node) {
+	case nodeType::R_0:
+		temp2 = _mm256_set1_epi8 ((char)0xFF);
+		break;
+	case nodeType::R_1:
+		temp2 = _mm256_set1_epi8 (0x00);
+		break;
+	case nodeType::REP:
+		temp2 = _mm256_set_epi64x(0xFFFFFFFFFFFFFFFFLL,0xFFFFFFFFFFFFFFFFLL,...
+				0xFFFFFFFFFFFFFFFFLL,0xFFFFFFFFFFFFFFFELL);
+		break;
+	case nodeType::SPC:
+		temp2 = _mm256_set_epi64x(0x8000000000000000LL,0x0000000000000000LL,...
+				0x0000000000000000LL,0x0000000000000000LL);
+		break;
+	case nodeType::NO_NODE_TYPES:
+		std::cout<<"Invalid node type";
+	}
+	__m256i pcmp = _mm256_cmpeq_epi64 (temp1, temp2);
+	unsigned bitmask = _mm256_movemask_epi8(pcmp);
+	return (bitmask == 0xffffffffU);
 }
 \end{minted}
 \end{code}
 
 \subsection{Decoding Rate-0 code}
+Rate-0 code is a special kind of node in a decoding tree in which all the descendants represent frozen bit positions, in other words corresponding node's frozen pattern contains all ones. One such example is given in the background section. For such a node, we know that all the bits are frozen hence decoder can immediately decode values as zero. All the decoded bits corresponding to such a node are set to zero. Rate-0 node allows decoder to avoid performing VN and CN operations at the subsequent child nodes in addition to decoding multiple bits simultaneously.
 
 \subsection{Decoding Rate-1 code}
+A node is considered as Rate-1 node, if all of its descendants in a decoder tree are information bits. In other words the Rate one node contains no frozen bits. Decoding of Rate-one can also be performed without traversing till the end of a decoder and hence avoiding significant number of VN and CN operation. However decoding Rate-1 node is not as straight forward as Rate-0 node. Decoding is done through threshold detection of all the LLRs and performing polar transform on the result to obtain decoded bits.
+
+\begin{code}
+	\captionof{listing}{Decoding rate-1 subcode}
+	\label{code:rateOneNodeDecoding}
+	\begin{minted}{c++}
+template<unsigned Nv>
+void decodeR_1_simd(int16_t demodLLRs[],int8_t beta[],int8_t decodedBits[]) {
+  eIndex = 0;
+  __m128i temp1,tempDecodedVec;
+  _m_prefetch(beta);
+  _m_prefetch(decodedBits + dIndex);
+  for(unsigned i = 0; i < Nv; i = i + 8) {
+    temp1 = _mm_loadu_si128((__m128i*)(demodLLRs + i));
+    tempDecodedVec = _mm_cmplt_epi16(temp1,zeros);
+    tempDecodedVec = tempDecodedVec & _mm_set1_epi16(1);
+    tempDecodedVec = _mm_packs_epi16(tempDecodedVec,_mm_setzero_si128());
+    _mm_storeu_si128((__m128i*)(beta + i),tempDecodedVec);
+    _mm_storeu_si128((__m128i*)(decodedBits + dIndex + i),tempDecodedVec);
+  }
+  polarTransform<Nv>(decodedBits + dIndex,decodedBits + dIndex);
+  dIndex += Nv;
+}
+\end{minted}
+\end{code}
+
+Although Rate-1 nodes avoids CN and VN operations, decoding is not parallel. Decoder needs to go through each of the LLRs to decode the bits and finally perform polar transform both of which are costly operations. To improve the latency through data parallelism, threshold detection can make use of SIMD instructions, which allow threshold detection of a vector through single SIMD comparison instruction.This improves the parallelism factor to sixteen for 16-bit LLRs with {AVX2} instructions. The code snippet in listing ~\ref{code:rateOneNodeDecoding} presents an example where rate-1 node decoding is implemented using AVX instructions resulting in parallelism factor of eight. Next step in decoding rate-1 node is performing polar transform operation. It is equivalent to performing polar encoding. As explained in the previous chapter, binary tree represents encoding process. Efficient polar transform implementation makes use of same optimizations techniques employed in encoder such as SIMD vectorization and look up table techniques.
 
 \subsection{Decoding RPC code}
+Repetition code (RPC) is another type of sub code which be identified from polar code. It allows decoding multiple bits without tree full tree traversal. A node is considered as RPC when only one its right most descendent contains information and all remaining bits are frozen. Bit packed frozen pattern allows easy identification of RPC node. If frozen pattern at the node is equal to one then it is a RPC node. RPC node decoding is similar to simple repetition code decoding by adding all the LLRs and doing threshold detection for the sum.  Result of threshold detection is stored at information bit position and remaining bits at the node are set to zero.
+
+\begin{equation*}
+ \beta_{v}[i] = \begin{cases}
+				0, \text{ when $\sum_{j} \alpha_{v}[j] \geq 0 ;$}  \\
+				1, \text{ otherwise.}
+				\end{cases}
+\end{equation*}
+
+Again, RPC-node decoding process has scope for improvement. Decoding requires summing of all LLRs. Summation operation efficiently performed with SIMD instructions through data parallelism instead of adding individual values. This vectorization has significant gain when sum of huge LLR vector is required.
 
 \subsection{Decoding SPC code}
+Another type of constituent codes which can be decoded more efficiently without complete tree traversal is single-parity check (SPC) code. These nodes have a code rate $Nv-1/Nv$. In other words, these nodes have only one frozen bit at right most position. Optimal ML decoding of SPC codes can be performed in an optimal way with very low complexity. Similar to Rate-1 code decoding SPC code requires threshold detection for all the LLRs. To achieve this efficiently same optimizations employed to Rate-1 code are reused. For SPC decoding two more additional steps are required namely finding position of minimum magnitude LLR and calculating the parity of decoded bits. If the parity of decoded bits is not even then bit value at the position of lowest magnitude LLR is flipped. Final step in the decoding is to obtain final decoded bits values through polar transform. The steps described above are shown in the algorithm ~\ref{algo:spcDecoding}.
+
+\IncMargin{1.5em}
+\begin{algorithm}[]
+	\KwData{$\alpha_{v}^{N_v-1}$, $N_v$}
+	\KwResult{$y_{0}^{N_v-1}$, $\beta_{0}^{N_v-1}$}
+	\SetKwFunction{FMain}{decodeSpc}
+	\SetKwProg{Fn}{function}{:}{}
+	\Fn{\FMain{$\alpha_{v}^{N_v-1}$,$y_{0}^{N_v-1}$, $\beta_{0}^{N_v-1}$}} {
+			$j = \alpha_{v}[i]$ \;
+			$parity = 0$ \;
+			\For{$i=0$ to $N_v-1$} {
+				$\beta_{v}[i] = \alpha_{v}[i] \ge 0$\;
+				\If {$j < |\alpha_{v}[i]|$} {
+					$j = i$ \;
+				}
+				$parity = parity + \beta_{\textit{i}}[i]$ \;
+			}
+		\If {$parity \neq 0$} {
+			$\beta_{v}[j] = 1 - \beta_{v}[j]$\;
+		}
+		$y_{0}^{N_v-1} = polarTransform(\beta_{0}^{N_v-1})$ \;
+		}
+	\caption{SPC decoding}
+	\label{algo:spcDecoding}
+\end{algorithm}
+\DecMargin{1.5em}
+
+SPC code uses same two operations (threshold detection and polar transform) as used in RPC decoding. This allows reusing of same optimization techniques. Two additional operations in SPC decoding are finding the position of minimum magnitude LLR and calculating the parity. Time complexity of finding a minimum magnitude LLR position is $\mathcal{O}\big(N\big)$. It can be reduced to $\mathcal{O}\big(N/8\big)$ by mapping search operation to SIMD instruction which processes vectors of size eight in parallel. SSE4.1 instruction $\mathtt{phminposu}$ comes to rescue. It processes vectors of size 128 bits, computes minimum amongst the packed unsigned 16-bit vectors returns the position and its value. Parity calculation of the decoded bits also requires iterating through all bits obtained after threshold detection. Again, to efficiently obtain number of set bits $\mathtt{popcnt}$ instruction is used, which can calculate the number of set bits in a vector. These optimizations reduced the latency of SPC decoding to less than $50\%$ of naive algorithmic implementation shown in ~\ref{algo:spcDecoding}.
+
+\subsection{Partial unrolling of decoder}
+
+\subsection{Cache prefetching}
+
+\subsection{Decoder tree pruning}
+
+
 
 \section{Extract Info Bits}
 Means select information bits from the reliable positions.
