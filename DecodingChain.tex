@@ -53,7 +53,7 @@ Code snippet in the listing ~\ref{code:subblockDeinterleaver} shows sample SIMD 
 \begin{code}
 \captionof{listing}{Vectorized Subblock deinterleaving for $N = 64$}
 \label{code:subblockDeinterleaver}
-\begin{minted}{c}
+\begin{minted}{c++}
 void subblockdeinterleaver64( int16_t y[], int16_t d[]) {
 	__m256i v256_in,v256_perm0,v256_out,v256_perm1,v256_perm2;
 	__m256i v256_out2,v256_blended,v256_perm3;
@@ -109,7 +109,22 @@ before 19.7us, after 0.47us
 
 \subsection{Identifying component codes}
 %How different kind of sub code types are identified efficiently using with bit packed frozen bits.
-As explained in the beginning of this chapter, naive SC algorithm purely sequential, hence decoding module introduces significant latency in the FEC chain. With improvements such as \cite{fastSSC} and \cite{SSC} decoding tree can be pruned by identifying particular patterns in frozen bit positions. Pruning of a tree allows decoding multiple bits simultaneously 
+As explained in the beginning of this chapter, naive SC algorithm purely sequential, hence decoder introduces significant latency in the FEC chain. With improvements such as \cite{fastSSC} and \cite{SSC} decoding tree can be pruned by identifying particular patterns in frozen bit positions. Pruning of a tree allows decoding multiple bits in parallel. Component codes out of polar codes can be identified which allow decoding without traversing the full decoder tree. Authors in \cite{SSC} and \cite{fastSSC} identify four such codes namely rate-0, rate-1, repetition and single parity codes. Decoding a code word through component codes improves latency without compromising the error correction performance. However to fully enjoy the fruits decoding tree pruning, implementation should be able identify component codes efficiently. One simple functional way is to go through all frozen bits and search by comparing with predefined patterns. Naive way of searching for a pattern introduces significant latency in the decoding process. Processors with \textit{AVX} and \textit{AVX2} support contain registers which can store 256/128 bits in a single register. Frozen pattern array/vector contain either one or zero, one indicating frozen bit and zero information bit. Since one bit is enough to represent type of bit position, frozen pattern can be stored by packing multiple bits type information to single 256bit register which allows identifying a pattern by comparing with a integer using single SIMD instruction. As an example with a mother code size $N=256$ information about which position is frozen and which is not can stored in a single 256 bit SIMD register in a bit packed format. To check whether it is a rate-0, rate-1, SPC or RPC requires one SIMD comparison instruction. Snippet in a listing ~\ref{code:rateOneSIMDComparison} illustrates an example of identifying for all zero in bitpacked frozen bits pattern.
+
+\begin{code}
+	\captionof{listing}{Check for a rate-1 subcode}
+	\label{code:rateOneSIMDComparison}
+	\begin{minted}{c++}
+template<>
+inline int isRateOneCode<256>(uint64_t s[]) {
+	__m256i temp1 = _mm256_loadu_si256 ((__m256i*)s);
+	//Filling whole vector with zero's
+	__m256i temp2 = _mm256_set1_epi8(0);
+	uint8_t result = (uint8_t)_mm256_cmpeq_epi64 (temp1, temp2)[0];
+	return result;
+}
+\end{minted}
+\end{code}
 
 \subsection{Decoding Rate-0 code}
 
