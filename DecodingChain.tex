@@ -222,10 +222,13 @@ Another type of constituent codes which can be decoded more efficiently without 
 SPC code uses same two operations (threshold detection and polar transform) as used in RPC decoding. This allows reusing of same optimization techniques. Two additional operations in SPC decoding are finding the position of minimum magnitude LLR and calculating the parity. Time complexity of finding a minimum magnitude LLR position is $\mathcal{O}\big(N\big)$. It can be reduced to $\mathcal{O}\big(N/8\big)$ by mapping search operation to SIMD instruction which processes vectors of size eight in parallel. SSE4.1 instruction $\mathtt{phminposu}$ comes to rescue. It processes vectors of size 128 bits, computes minimum amongst the packed unsigned 16-bit vectors returns the position and its value. Parity calculation of the decoded bits also requires iterating through all bits obtained after threshold detection. Again, to efficiently obtain number of set bits $\mathtt{popcnt}$ instruction is used, which can calculate the number of set bits in a vector. These optimizations reduced the latency of SPC decoding to less than $50\%$ of naive algorithmic implementation shown in ~\ref{algo:spcDecoding}.
 
 \subsection{Partial unrolling of decoder}
+Recursive formulation decoders makes it easy to implement in addition to allowing reuse of hardware resources in FPGA/ASIC. Successive cancellation decoding algorithm for polar codes is formulated recursive form. However this formulation has huge disadvantage when it comes to software implementations. Every recursive function call in software requires new stack frame allocation and jump to a starting address of function. Both operations are expensive in terms of processor cycles. Authors in ~\cite{fastPolarDecodersAlgoImpl} propose unrolling of the decoder, hence avoiding recursive function calls and branch instructions. In polar FEC chain of 5G, full unrolling of decoder is not possible due to varying block-length and code rate requirements. Different code rate requirement makes it impossible to know frozen bit positions are compile time, hence it is necessary to dynamically identify presence special nodes in the decoder tree. In this work, partial decoding unrolling is done, i.e recursive function calls are completely avoided. Template concept of C++ language are used for auto unrolling of functions. However still branches are present which check for the presence special nodes in a tree. Partial unrolling also significantly reduced the decoding latency.
 
 \subsection{Cache prefetching}
+Performance bottle necks in the modern processors lies in main memory access. To overcome this problem most of modern processors contain smaller fast memory called cache close to the processor. Addition of caches reduces the number of accesses to main memory. However due to the limited cache size it might happen that the requested data not being present in cache, which results in an event called cache-miss. Copied data from main memory to cache has a huge overhead. Cache miss overhead can be reduced by dealing with less memory allocation, in other words reusing the memory as much as possible. Some of the modern processors provide special non blocking instructions which allow cache line prefetching. If the memory access required is known, prefetching instruction can be issued well in advance by software before accessing memory. These instructions if used efficiently, can hide the memory access latency. In this work, decoder implementation is optimized for AMD EPYC platform, which provides cache prefetching instrunctions through $ \mathtt{3dnow} $ extensions. Due to regular memory access in polar decoder, prefetching instructions are used whenever possible to hide memory access latency.
 
 \subsection{Decoder tree pruning}
+Decoding latency can be further reduced by minimizing the number of nodes to be traversed in a decoder tree. This can be achieved decoding tree pruned intelligently at a particular level based on SNR and code rate.
 
 
 
@@ -233,5 +236,7 @@ SPC code uses same two operations (threshold detection and polar transform) as u
 Means select information bits from the reliable positions.
 
 \section{Extract parity check bits}
+
+\section{CRC calculation}
 
 

@@ -171,7 +171,14 @@ One such example, when frozen indices for $N = 8$ are $\{0,1,3,4\}$. The full de
 \paragraph{\emph{C. List Decoding of Polar Codes (SCL)}\newline}  \label{SCL}
 
 
-\section{Processor architecture background \newline}
+\section{Processor architecture background}
+To better understand the bottlenecks and optimizations performed in software implementation of 5G FEC chain, it is necessary to equip ourselves with the fundamentals of processor architecture. This section gives necessary background about cache memory systems, instruction pipelining branch predictors, and function calling mechanism etc.
+
+\subsection{Cache memory}
+In the modern processors, fast memory called cache is used to reduce the average access time of main memory. cache minimizes the number of accesses to main memory by storing frequently accessed location's data in it hence avoiding huge penalty of reading data frequently from main memory which operates at a much lower frequency than the CPU. When memory location is accessed for the first time it is copied from main memory to cache, future accesses to same location are read/written only to cache.
+
+
+reducing caches are smaller and faster memory placed closed to CPU.
 
 \TODO{Here I need to explain the typical features which are important for understanding the latency contributors and how they can be resolved}
 
