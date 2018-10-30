@@ -240,6 +240,7 @@ if(CRCLENGTH == 6) //If Crc6 needs be calculated, then change the mask.
 Both code achieve same results, however \ref{code:NaiveCMOVEg} has possibility of branch-prediction, for the \ref{code:CMOVEEg} compiler identifies conditional move construct and generates $\mathtt{CMOV}$ potentially avoiding pipeline flush. Optimizations such as minimizing branches, using built-in macros and using constructs which help compiler to identify pattern are utilized in this work.
 
 \subsection{Vector processing units}
+Vector processing units are special kind of multiple computational elements that perform same operation on multiple points simultaneously. Machines with vector processing units exploits data level parallelism but not concurrency. Same instruction operates on multiple data points in other words there are simultaneous computations but there is a single process. These special kind of instructions are also called SIMD (Single Instruction Multiple Data) in Flynn's taxonomy of parallel computers. These instructions are particularly useful when same operation needs to 
 
 
 \subsection{Function calling mechanism}
