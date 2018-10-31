@@ -5,7 +5,7 @@ In this chapter, implementation and optimization details of 5G polar decoding FE
 
 \begin{figure}[]
 	\centering
-	\includegraphics[width=0.82\textwidth]{./figures/receiverFECChain.pdf}
+	\includegraphics[width=0.7\textwidth]{./figures/receiverFECChain_crc.pdf}
 	\caption{Polar decoding FEC chain for PUCCH/PUSCH}
 	\label{fig:5grx_fec_chain}
 \end{figure}
@@ -29,7 +29,7 @@ The first operation after receiving the LLR values is channel deinterleaving, Th
 Vector processing instructions cannot be used for the implementation of interleaver due irregular and non uniform memory access, therefore interleaver just plain functional implementation. One optimization technique was to avoid new memory allocation and using already allocated memory. This avoids the overhead of dynamic memory allocation and initialization. Channel deinterleaving is one of significant contributor to latency in polar decoding FEC chain, since each of the LLR values need to processed sequentially.
 
 \section{Inverse rate matching}
-Inverse rate matching step maps the $E$ LLR values to mother code block size $ N $. Rate matching step has three modes puncturing, shortening and repetition. Mode is selected based on rate matcher output size ($E$) and mother code size($ N $). If $E > N$ then repetition performed, otherwise either puncturing and shortening is done. If $ \frac{K}{E} > \frac{7}{16} $ shortening else puncturing is performed. Major optimization in inverse rate matching are utilizing SIMD capability for soft combining when $ E>N $ and performing block wise copying. \NOTE{Does it makes sense to explain criteria why puncturing or shortening is selected}
+Inverse rate matching step maps the $E$ LLR values to mother code block size $ N $. Rate matching step has three modes puncturing, shortening and repetition. Mode is selected based on rate matcher output size ($E$) and mother code size($ N $). If $E > N$ then repetition performed, otherwise either puncturing and shortening is done. If $ \frac{K}{E} > \frac{7}{16} $ shortening else puncturing is performed. Major optimization in inverse rate matching are utilizing SIMD capability for soft combining when $ E>N $ and performing block wise copying. \NOTE{Does it makes sense to explain criteria why and when puncturing or shortening is selected}
 %
 %to and avoiding a copying operations when the mode is shortening or puncturing instead using a pointer manipulation to select
 %Software optimization in inverse rate matching is performed by Empirically it is observed that shi  type of rate matching is selected based on code rate.
@@ -224,18 +224,39 @@ SPC code uses same two operations (threshold detection and polar transform) as u
 \subsection{Partial unrolling of decoder}
 Recursive formulation decoders makes it easy to implement in addition to allowing reuse of hardware resources in FPGA/ASIC. Successive cancellation decoding algorithm for polar codes is formulated recursive form. However this formulation has huge disadvantage when it comes to software implementations. Every recursive function call in software requires new stack frame allocation and jump to a starting address of function. Both operations are expensive in terms of processor cycles. Authors in ~\cite{fastPolarDecodersAlgoImpl} propose unrolling of the decoder, hence avoiding recursive function calls and branch instructions. In polar FEC chain of 5G, full unrolling of decoder is not possible due to varying block-length and code rate requirements. Different code rate requirement makes it impossible to know frozen bit positions are compile time, hence it is necessary to dynamically identify presence special nodes in the decoder tree. In this work, partial decoding unrolling is done, i.e recursive function calls are completely avoided. Template concept of C++ language are used for auto unrolling of functions. However still branches are present which check for the presence special nodes in a tree. Partial unrolling also significantly reduced the decoding latency.
 
+\TODO{Add picture showing unrolled decoder here.}
+
 \subsection{Cache prefetching}
-Performance bottle necks in the modern processors lies in main memory access. To overcome this problem most of modern processors contain smaller fast memory called cache close to the processor. Addition of caches reduces the number of accesses to main memory. However due to the limited cache size it might happen that the requested data not being present in cache, which results in an event called cache-miss. Copied data from main memory to cache has a huge overhead. Cache miss overhead can be reduced by dealing with less memory allocation, in other words reusing the memory as much as possible. Some of the modern processors provide special non blocking instructions which allow cache line prefetching. If the memory access required is known, prefetching instruction can be issued well in advance by software before accessing memory. These instructions if used efficiently, can hide the memory access latency. In this work, decoder implementation is optimized for AMD EPYC platform, which provides cache prefetching instrunctions through $ \mathtt{3dnow} $ extensions. Due to regular memory access in polar decoder, prefetching instructions are used whenever possible to hide memory access latency.
+Performance bottle necks in the modern processors lies in main memory access. To overcome this problem most of modern processors contain smaller fast memory called cache close to the processor. Addition of caches reduces the number of accesses to main memory. However due to the limited cache size it might happen that the requested data not being present in cache, which results in an event called cache-miss. Copied data from main memory to cache has a huge overhead. Cache miss overhead can be reduced by dealing with less memory allocation, in other words reusing the memory as much as possible. Some of the modern processors provide special non blocking instructions which allow cache line prefetching. If the memory access required is known, prefetching instruction can be issued well in advance by software before accessing memory. These instructions if used efficiently, can hide the memory access latency. In this work, decoder implementation is optimized for AMD EPYC platform, which provides cache prefetching instructions through $ \mathtt{3dnow} $ extensions. Due to regular memory access in polar decoder, prefetching instructions are used whenever possible to hide memory access latency.
 
 \subsection{Decoder tree pruning}
-Decoding latency can be further reduced by minimizing the number of nodes to be traversed in a decoder tree. This is achieved by pruning decoding tree intelligently at a particular level based on the given SNR and code rate. The level of pruning for a particular SNR and code can be determined through simulations. This information can be stored in a look up table which can be used later to determine the level pruning during decoding. Here decoder tree is pruned irrespective frozen pattern type
+Decoding latency can be further reduced by minimizing the number of nodes to be traversed in a decoder tree. This is achieved by pruning decoding tree intelligently at a particular level based on the given SNR and code rate. The level of pruning for a particular SNR and code can be determined through simulations. This information can be stored in a look up table which can be used later to determine the level pruning during decoding. Here decoder tree is pruned irrespective frozen pattern type. Main idea is to adoptively prune the decoding tree depending on the SNR and code rate in hand. Tree pruning level is determined before decoder starts, as decoding proceeds and reaches a particular level, frozen pattern is checked whether it matches any special patterns such as R0, R1, RPC or SPC. If it matches any of these patterns then decoding is performed accordingly otherwise further traversing the tree is avoided by decoding through threshold detection and then applying polar transform. This equivalent to performing a hard decision decoding at that node.
+
+%This pruning can also be viewed as a adoptive pruning to 
+
+\TODO{Further continuation of this section requires simulation results, estimating the level of pruning depending on SNR and code rate}
+
+\TODO{Here compare the decoding latency of this implementation and state of the art latency values}
+
+\TODO{Add the picture here showing pruning of decoding tree irrespective of node type}
 
 
-\section{Extract Info Bits}
-Means select information bits from the reliable positions.
+\subsection{Extract parity check bits}
+Parity bits are useful for early termination when decoding performed through list algorithm otherwise they are not required. Polar decoder output is the transmitted codeword of mother code with a block-length $N$ including frozen, information bits and parity check bits. As specified in the 5G standard \cite{3gpp.38.212} for PUCCH three parity bits are calculated ($n_{PC} = 3$) two of these bits are placed in the two least reliable positions out of $K+n_{PC}$, $K+n_{PC}$ positions are most reliable out of $N$. Remaining one parity bit ($ n_{PC}^{wm} = 1 $) is placed in position which corresponds minimum hamming weight row of the polar code generator matrix. This position needs to be identified dynamically since it varies for different code rates. Identifying a minimum hamming weight row requires information about number of ones in each row of generator matrix. One way to know is by storing hamming weight of every row in a look up table and read the values of particular rows. Another way is to exploit the unique structure of the polar generator matrix, i.e number set bits in an integer representing the row index gives hamming weight of a particular row. For the latter method lookup table is not required. In the FEC chain implementation former method is implemented and it has following advantages over latter.
 
-\section{Extract parity check bits}
+\begin{itemize}  
+	\item Modern processors provide instructions to efficiently calculate the number of set bits in an integer. AMD EPYC platform provides $\mathtt{popcnt}$ instruction \cite{AgnerFog}.
+	\item Dynamically calculating reduces the number of irregular memory accesses which are required for reading from lookup table hence reducing the cache misses.
+\end{itemize}
+
+After extracting parity bits those positions are marked as frozen to ease the extraction of information bits.
+
+\subsection{Extract Info Bits}
+After extracting parity bits codeword of mother code with a block-length $N$ contains frozen and information bits. To obtain only information bits, again at the receiver highest reliability indices must be identified for the same parameters $E$, $K$ and $N$. Same algorithm presented in the encoding chain chapter is used for identifying reliability indices, information bits are read from $K$ most reliable positions out of $N$. There are two ways to extract information bits, One is to take most reliable positions sort them, extract information bits in the order of increasing reliability. Another method is using the previously created frozen pattern, read bits from the location where it contains zero (means that position has information bit). After extensive profiling its identified that sorting is more expensive than going through all $N$ values and reading information bits from non frozen locations. So latter method is included in the FEC chain.
 
 \section{CRC calculation}
+For PUCCH and PUSCH, 5G standard specifies different CRC sizes depending on the number of information bits($A$). As specified in \cite{3gpp.38.212} if $ A \ge 20$ $ CRC11 $  otherwise $ CRC6 $ is calculated.  For CRC calculation same algorithm which was used for $ CRC24 $ calculation in PDCCH/PBCH used \cite{Sarwate:1988:CCR:63030.63037}. It is adopted to calculate CRC blockwise for the blocks of size 8-bits with the help of prebuilt lookup tables of $ CRC11 $ and $ CRC6 $. Unlike PDCCH/PBCH CRC calculation, this is a generic implementation, in other words type of CRC is decided at runtime based on the value of $A$ and gets calculated with same generic logic.
+
+\section{Decoding FEC chain latency results}
 
 
