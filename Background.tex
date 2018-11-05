@@ -205,6 +205,9 @@ Example shown in figure \ref{fig:pipeline} assumes only five phases of instructi
 \end{minted}
 which tells compiler to place more frequently executing part of the code just after branch instruction to minimize pipeline flushing. Following code snippet shows the typical usage.
 
+\begin{code}
+	\captionof{listing}{Branching hints to compiler}
+	\label{code:likelyHint}
 \begin{minted}{c++}
 #define likely(expr) __builtin_expect(!!(expr), 1)
 if (likely(a > 1)) {
@@ -215,6 +218,7 @@ if (likely(a > 1)) {
 	...
 }
 \end{minted}
+\end{code}
 
 Another feature provided by modern processors is conditional move instruction ($\mathtt{CMOV}$). Compiler intelligently maps if statements to conditional move instructions. $\mathtt{CMOV}$ copies a particular value to register or memory based on the flags set. It is not vulnerable to branch-prediction failure since no branch instructions gets generated, hence avoiding pipeline flushing. Following listing in \ref{code:NaiveCMOVEg} and \ref{code:CMOVEEg} illustrates the feature.
 
@@ -256,5 +260,3 @@ Modern x86 processors from AMD and Intel provide different SIMD extensions namel
 
 \subsection{Recursive function calling mechanism}
 Most of the encoder and decoder implementations are implemented through recursion. Recursive function is a method which calls itself. It is a powerful tool in computer science which can be used for solving many interesting problems. However when it comes to performance, recursive problem solving falls behind algorithms which use looping to solve the same problem. Mainly due to the fact that every time a recursive function is called new stack frame is allocated, local data is pushed to call stack and execution must branch to the beginning of function. Branching and pushing data to call stack are expensive operations. In case of polar codes both encoding and decoding are implemented as recursive functions. To reduce the latency of FEC chain encoding/decoding implementations are unrolled to avoid recursions. For encoder, unrolling is carried out by manually implementing multiple inline functions. In decoder implementation unrolling is carried out by using C++ template concept. Although unrolling increases code size, for the application in hand latency is of at most importance than code size. Unrolling of the encoder and decoder implementations significantly improved the latency of FEC chain.
-
-

@@ -62,12 +62,10 @@ void subblockdeinterleaver64( int16_t y[], int16_t d[]) {
 	v256_perm1 = _mm256_setr_epi32(0,2,4,6,1,3,5,7);
 	v256_perm2 = _mm256_setr_epi32(1,3,5,7,0,2,4,6);
 	v256_perm3 = _mm256_setr_epi32(4,5,6,7,0,1,2,3);
-	
 	//prepare part1
 	v256_in = _mm256_loadu_si256((__m256i*)y);
 	v256_out = _mm256_permutevar8x32_epi32 (v256_in,v256_perm0);
 	_mm256_storeu_si256((__m256i*)d,v256_out);
-	
 	//prepare part2
 	v256_in = _mm256_loadu_si256((__m256i*)(y + 16));
 	v256_out = _mm256_permutevar8x32_epi32 (v256_in,v256_perm1);
@@ -79,11 +77,11 @@ void subblockdeinterleaver64( int16_t y[], int16_t d[]) {
 	v256_out = _mm256_permutevar8x32_epi32(v256_in, v256_perm1);
 	v256_blended = _mm256_blend_epi32(v256_out2,v256_out,0b11110000);
 	_mm256_storeu_si256((__m256i*)(d + 32),v256_blended);
-	
 	//prepare part3, same as part1
 	v256_in = _mm256_loadu_si256((__m256i*)(y + 48));
 	v256_out = _mm256_permutevar8x32_epi32 (v256_in,v256_perm0);
-	_mm256_storeu_si256((__m256i*)(d + 48),v256_out);	
+	_mm256_storeu_si256((__m256i*)(d + 48),v256_out);
+		
 }
 \end{minted}
 \end{code}
@@ -92,10 +90,8 @@ void subblockdeinterleaver64( int16_t y[], int16_t d[]) {
 \captionof{listing}{Non-vectorized Subblock deinterleaving}
 \label{code:slowSubblockDeinterleaver}
 \begin{minted}{c}
-void subblockdeInterleaver( vector<int16_t> &y, vector<int16_t> &d) const
-{
-	for (uint32_t n = 0; n < N; n++)
-	{
+void subblockdeInterleaver( vector<int16_t> &y, vector<int16_t> &d) {
+	for (uint32_t n = 0; n < N; n++) {
 		uint32_t i = floor((n * 32 ) / N);
 		uint32_t Jn = P[i] * (N/32) + (n % (N/32));
 		d[Jn] = y[n];
@@ -104,8 +100,18 @@ void subblockdeInterleaver( vector<int16_t> &y, vector<int16_t> &d) const
 \end{minted}
 \end{code}
 
-Results Latency optimization for subblock deinterleaver $N = 1024$
-before 19.7us, after 0.47us 
+Results Latency optimization of subblock deinterleaver for $N = 1024$ is given the table ~\ref{tab:subblockDeinterleaverLatency}.
+\begin{table}[!h]
+	\begin{center}
+		\caption{Latency comparison: Subblock deinterleaver}
+		\label{tab:subblockDeinterleaverLatency}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Naive & Optimized \\
+			\hline
+			Latency ($\mu$s) & $19.7$ & $0.47$\\
+		\end{tabular}
+	\end{center}
+\end{table}
 
 \section{Decoder optimization}
 
