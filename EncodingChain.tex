@@ -227,20 +227,19 @@ $\overline{Q}_{\textit{I}}^{\textit{N}}$ : Information bit positions. \newline
 \end{algorithm}
 \DecMargin{1.5em}
 
-Algorithm \ref{algo:polarCodeConstuctionAlgo} shows how the information bit indices are selected by taking rate matching also into account. Finding and removing incapable bits due to rate matching is an expensive operation. As it can be seen in the algorithm at lines ~\ref{line:subblockRef1}, ~\ref{line:subblockRef2}, ~\ref{line:subblockRef3} and ~\ref{line:subblockRef4} subblock interleaving pattern is also taken into account for identifying the incapable bits due to the presence of subblock interleaver between rate matching and encoder. Due to presence of time consuming operations such as sorting, set\_union, search, remove and erase. Contribution of this function highest among all the components of FEC chain. In terms of latency, for a scenario with $E = 846, N = 1024, K = 130$ puncturing needs happen, for these parameters, polar code construction, encoding, subblock interleaving rate matching and channel interleaver takes 411us, only polar code construction contribution is \TODO{x us, measure this value}. \newline
+Algorithm \ref{algo:polarCodeConstuctionAlgo} shows how the information bit indices are selected by taking rate matching also into account. Finding and removing incapable bits due to rate matching is an expensive operation. As it can be seen in the algorithm at lines ~\ref{line:subblockRef1}, ~\ref{line:subblockRef2}, ~\ref{line:subblockRef3} and ~\ref{line:subblockRef4} subblock interleaving pattern is also taken into account for identifying the incapable bits due to the presence of subblock interleaver between rate matching and encoder. Due to presence of time consuming operations such as sorting, set\_union, search, remove and erase. Contribution of this function highest among all the components of FEC chain. In terms of latency, for a scenario with $E = 846, N = 1024, K = 130$ puncturing needs happen, for these parameters, polar code construction, encoding, subblock interleaving rate matching and channel interleaver takes 411us, only polar code construction contribution is 377 $\mu$s. \newline
 
-Let's analyze the complexity of each the operations. Sorting is $\mathcal{O}\big((N-E)\log{}(N-E)\big)$ complex and of set\_union is again $\mathcal{O}\big((N-E)\log{}(N-E)\big)$ complex. Block-length $N$ is derived using $E$ and $K$, so $(N-E)$ is small compared to $N$. Next operation in the algorithm is $remove$ and $erase$. These functions are directly used from standard C++ library. After deciding rate matching type (shortening/puncturing) and identifying incapable bit indices, these locations must frozen, this requires traversing through reliability indices array and removing incapable bit locations. $remove$ and $erase$ functions are used to perform this operation. $remove$ function searches through a reliability array for incapable bit index and removes the element. $erase$ operations erases the memory allocated to removed element and resizes the array. Complexity of remove operation is $\mathcal{O}(N)$. $remove$ function has to search through all the elements of an array for every frozen value and have to move the elements to overwrite the removed position, Size of array is $N$, it can be as large as $1024$. Erase operation has to deallocate the memory and resize the container. $remove$ and $erase$ together are $\mathcal{O}\big(N^2\big)$ complex. Above complexity analysis is supported from measurements of time taken by $remove$ and $erase$ functions. It is found to be \TODO{X $\mu$ s}. Avoiding these operations is critical to reduce the latency of FEC chain. \newline
+Let's analyze the complexity of each the operations. Sorting is $\mathcal{O}\big((N-E)\log{}(N-E)\big)$ complex and of set\_union is again $\mathcal{O}\big((N-E)\log{}(N-E)\big)$ complex. Block-length $N$ is derived using $E$ and $K$, so $(N-E)$ is small compared to $N$. Next operation in the algorithm is $remove$ and $erase$. These functions are directly used from standard C++ library. After deciding rate matching type (shortening/puncturing) and identifying incapable bit indices, these locations must frozen, this requires traversing through reliability indices array and removing incapable bit locations. $remove$ and $erase$ functions are used to perform this operation. $remove$ function searches through a reliability array for incapable bit index and removes the element. $erase$ operations erases the memory allocated to removed element and resizes the array. Complexity of remove operation is $\mathcal{O}(N)$. $remove$ function has to search through all the elements of an array for every frozen value and have to move the elements to overwrite the removed position, Size of array is $N$, it can be as large as $1024$. Erase operation has to deallocate the memory and resize the container. $remove$ and $erase$ together are $\mathcal{O}\big(N^2\big)$ complex. Above complexity analysis is supported from measurements of time taken by $remove$ and $erase$ functions. It is found to be 318 $\mu$s. Avoiding these operations is critical to reduce the latency of FEC chain. \newline
 
 In this work, algorithm is reformulated to avoid searching, copying and memory deallocation while removing incapable bit indices. To avoid search operations, a lookup table is built whose values indicate the position of particular reliability value. After identifying the position it is marked as removed instead of removing. Marking as two advantages first one is it avoids memory deallocation hence copying, second is keeps the same order of elements which particularly useful for using the same lookup table for finding the next incapable bit index. After all the incapable bit indices are marked as removed, only the unmarked elements are considered as reliable bit positions for placing information bits.
 
 %Out of these positions information bits are placed in most reliable $K+n_{PC}$ positions.
 
-Next optimization is avoiding copying subblock interleaving pattern to frozen indices array in case of shortening. Instead a subblock interleaving pattern is directly used from look up table to mark the reliability indices as removed. In addition to above mentioned optimizations, minor ones such as avoiding dynamic memory allocation instead reserving required memory in advance and employing pointer operations to avoid copying are performed. Finally information bit positions are obtained from iterating the reliability table from the end (since indices are sorted in ascending order of reliabilities) and extracting $K+n_{PC}$ unmarked positions. These optimizations significantly reduced the latency from \TODO{Y $\mu$ s} to \TODO{Y $\mu$ s}.
+Next optimization is avoiding copying subblock interleaving pattern to frozen indices array in case of shortening. Instead a subblock interleaving pattern is directly used from look up table to mark the reliability indices as removed. In addition to above mentioned optimizations, minor ones such as avoiding dynamic memory allocation instead reserving required memory in advance and employing pointer operations to avoid copying are performed. Finally information bit positions are obtained from iterating the reliability table from the end (since indices are sorted in ascending order of reliabilities) and extracting $K+n_{PC}$ unmarked positions. These optimizations significantly reduced the latency from 377 $\mu$s to 15 $\mu$s.
 
 Algorithm \ref{algo:polarCodeConstuctionAlgoOptimized} presents the optimized reformulation of Algorithm \ref{algo:polarCodeConstuctionAlgo} without erase, remove, redundant copying and with other minor optimizations.
 
-\TODO{Update the latency table with correct values}
-
+Table \ref{tab:codeConstrLatency} comparison of latency for reliability indices selection function, for the FEC chain parameters $I_{IL} = 1, n_{max} = 10, n_{pc} = 0 ,n_{pc}^{wm} = 0, I_{BIL} = 0, E = 846, K = 130$. 
 \begin{table}[]
 	\begin{center}
 		\caption{Latency comparison: Information bit positions selection}
@@ -248,7 +247,7 @@ Algorithm \ref{algo:polarCodeConstuctionAlgoOptimized} presents the optimized re
 		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
 			\textbf{ } & Naive & Optimized \\
 			\hline
-			Latency ($\mu$s) & $411$ & $11$\\
+			Latency ($\mu$s) & $377$ & $15$\\
 		\end{tabular}
 	\end{center}
 \end{table}
@@ -263,7 +262,7 @@ Once the information bit indices are identified, $K$ bits are inserted to reliab
 	\label{fig:treeEncoding}
 \end{figure}
 
-As it can be observed from the tree, same operation is performed at every node only the size of a vector is different, due to the regular structure encoding problem fits the recursive algorithmic form. Algorithm in ~\ref{algo:polarEncoder} shows a naive implementation of recursive encoder. In the algorithm shown in ~\ref{algo:polarEncoder} each bit is represented as one integer and each bit is processed serially, hence parallelism is not exploited. Upon profiling the implementation it also identified that ~\ref{line:copying1} and ~\ref{line:copying2} are also the bottlenecks since copying is involved. One more issue with the algorithm in ~\ref{algo:polarEncoder} is the recursive implementation. Although the encoding can be easily implemented with this algorithm, each recursive function call in software is expensive, since it requires a new stack frame to be allocated each time. Background about overhead of recursive function calling is presented in the 
+As it can be observed from the tree, same operation is performed at every node only the size of a vector is different, due to the regular structure encoding problem fits the recursive algorithmic form. Algorithm in ~\ref{algo:polarEncoder} shows a naive implementation of recursive encoder. In the algorithm shown in ~\ref{algo:polarEncoder} each bit is represented as one integer and each bit is processed serially, hence parallelism is not exploited. Upon profiling the implementation it also identified that ~\ref{line:copying1} and ~\ref{line:copying2} are also the bottlenecks since copying is involved. One more issue with the algorithm in ~\ref{algo:polarEncoder} is the recursive implementation. Although the encoding can be easily implemented with this algorithm, each recursive function call in software is expensive, since it requires a new stack frame to be allocated each time. Background about overhead of recursive function calling is presented in the previous chapter.
 
 \IncMargin{1.5em}
 \begin{algorithm}[]
@@ -295,15 +294,15 @@ As it can be observed from the tree, same operation is performed at every node o
 
 To avoid the disadvantages mentioned above, following optimization techniques are considered.
 
-$\bullet$ \textbf{Parallel processing:} To avoid the serial processing of bits and for improving the parallelism factor, method described in section ~\ref{dataPackUnpack} is used, i.e is multiple bits are packed to single integer, in this particular instance, every 64 bits of are packed into 64-bit integers so that 64-bits can be processed in parallel with 64-bit supported processor, which results in a parallelism factor ($\mathcal{P}$) of 64. Packing also helps to further increase the parallelism factor $\mathcal{P}$ with state of the art SIMD processing units of the modern processors. SIMD instructions can process of 256-bit or 128-bit in a single instruction which results in a parallelism factor ($\mathcal{P}$) of 256 with AVX and 128 with SSE instructions. \newline
+$\bullet$ \textbf{Data parallelism} To avoid the serial processing of bits and hence improving the parallelism factor, method described in section ~\ref{dataPackUnpack} is used, i.e multiple bits are packed to a single integer. In this particular instance, every 64 bits of are packed into 64-bit integers so that 64-bits can be processed in parallel with 64-bit processor, which results in a parallelism factor ($\mathcal{P}$) of 64. Packing also helps to further increase the parallelism factor $\mathcal{P}$ with state of the art SIMD processing units of the modern processors. SIMD instructions can process of 256-bit or 128-bit in a single instruction which results in a parallelism factor ($\mathcal{P}$) of 256 with AVX and 128 with SSE instructions. \newline
 \newline
-$\bullet$ \textbf{Avoiding the copy operations:} Naive algorithm in ~\ref{algo:polarEncoder} splits the of $N$-bits into two $\frac{N}{2}$-bit vectors and copies them temporarily allocated variables. Code profiling pointed out that these copying operations are the bottlenecks. In optimized algorithm, instead of copying, C++ pointers concept is used to calculate the index where next block of vector starts and this index is passed to next node for further processing. \newline
+$\bullet$ \textbf{Avoiding the copy operations:} Naive algorithm in ~\ref{algo:polarEncoder} splits the of $N$-bits into two $\frac{N}{2}$-bit vectors and copies them to temporarily allocated variables. Code profiling pointed out that these copying operations are the bottlenecks. In optimized algorithm, instead of copying, C++ pointers concept is used to calculate the index where next block of vector starts and this index is passed to next node for further processing. \newline
 \newline
-$\bullet$ \textbf{Unrolling the encoder:} Recursive implementation has significant overhead due to the huge number of recursive function calls which require new stack frame allocation. To avoid this overhead, encoder implementation is unrolled, in other words, new inline functions are defined for each vector size. Advantages of these functions is that they don't won't require new stack frame to be allocated when an inline function is called, they will make use of stack frame from which they are called. However this requires a separate inline function for every vector size. Having a different function for every vector size also has advantages, which allows us to use SIMD instructions whenever vector size can fit SIMD registers otherwise normal instructions can be used. \newline
+$\bullet$ \textbf{Unrolling the encoder:} Recursive implementation has significant overhead due to the huge number of recursive function calls which require new stack frame allocation and branching. To avoid this overhead, encoder implementation is unrolled, in other words, new inline functions are defined for each vector size. Advantages of these functions is that they don't won't require new stack frame to be allocated when an inline function is called, they will make use of stack frame from which they are called. However this requires a separate inline function for every vector size. Having a different function for every vector size also has advantages, which allows us to use SIMD instructions whenever vector size can fit SIMD registers otherwise normal instructions can be used. \newline
 \newline
-$\bullet$ \textbf{Pruning encoder tree:} As shown in the figure ~\ref{fig:treeEncoding}, encoding process can be represented as traversal of a binary tree. When an encoding is implemented in software, when traversing the tree towards leaf nodes, bit vector size can becomes less than 8 bits, which requires accessing 4/2/1 bits of an integer. In standard processors smallest unit which can be accessed is an 8-bit integer. To access 4/2/1 bits masking operations are needed. Since the nodes in a binary tree which access 4,2,1 bits is huge, significant number of masking operations are needed, which introduces a added overhead. Pruning of tree at level where the bit vector size is 8, avoids this overhead in addition to reducing the number of nodes to be traversed in a binary tree. Pruning is done by building a lookup table containing encoded value for every combination of 8-bit vector and reading the value from lookup table for the encoded value when the bit vector size is 8. Lookup table will contain 256 bytes, containing encoded value for every combination of 8-bit vector.\newline
+$\bullet$ \textbf{Pruning encoder tree:} As shown in the figure ~\ref{fig:treeEncoding}, encoding process can be represented as traversal of a binary tree. When an encoding is implemented in software, when traversing the tree towards leaf nodes, bit vector size can becomes less than 8 bits, which requires accessing 4/2/1 bits of an integer. In standard processors smallest unit which can be accessed in software is 8-bit integer. To access 4/2/1 bits masking operations are needed. Since the nodes in a binary tree which access 4,2,1 bits are huge. Hence significant number of masking operations are needed, which introduces a added overhead. Pruning of tree at level where the bit vector size is 8, avoids this overhead in addition to reducing the number of nodes to be traversed in a binary tree. Pruning is done by building a lookup table containing encoded value for every combination of 8-bit vector and reading the value from lookup table for the encoded value when the bit vector size is 8. Lookup table will contain 256 bytes, containing encoded value for every combination of 8-bit vector.\newline
 \newline
-Pruning of the tree had a significant latency improvement, it can be better understood by taking an example. In a scenario where $N = 1024$, with unpruned tree number of nodes to be traversed for encoding is 2047 nodes, out of these nodes contain 1024 1-bit, 512 2-bit and 256 4-bit nodes. With pruned tree 4/2/1 bit nodes are not present, number of nodes to be traversed reduces to 255 from 2047. Pruning avoids masking operations as well as tree traversal. \newline
+Pruning of the tree had a significant latency improvement, it can be better understood by taking an example. In a scenario where $N = 1024$, with unpruned tree number of nodes to be traversed for encoding is 2047 nodes, out of these nodes contain 1024 1-bit, 512 2-bit and 256 4-bit nodes. With pruned tree 4/2/1 bit nodes are not present, number of nodes to be traversed reduces to 255 from 2047 (87\% reduction). Pruning avoids masking operations and reduces nodes in a tree. \newline
 \newline
 Example of a pruned unrolled encoder containing also the tree traversal is shown in the figure ~\ref{fig:unrolledEncoder}. Inline function names for different bit vector size are also shown in the figure. One can see that tree traversing ends at $bitMult8$ function due to pruning. Tree traversal flow is represented with orange line in a figure.
 
@@ -345,38 +344,31 @@ inline void bitMultG512(uint8_t *s, uint8_t *dEncoded)
 	\end{center}
 \end{table}
 
-\section{Rate matching}
-\TODO{Nothing significant for now, Only minor optimizations, May be subblock interleaver can be optimized to reduce the latency by 10us in rate matching process}
 
-\section{Miscellaneous Optimization}
-Avoiding multiplication/division and modulus operations and achieving the same using bitwise operations.
-Implemented approximate versions $log_{2}x$ and exponential functions to reduce the number of floating point multiplications.
-Avoided jump functions to avoid flushing of the instruction pipeline.
-Using the compiler optimization primitives to reduce the branches in the program.
+\section{Subblock interleaver}
+Subblock interleaver divides block of $N$ bits into $32$ subblocks, each containing $\frac{N}{32}$ bits. These subblocks are interleaved as shown in the figure \ref{fig:subblockInterleaver}. Functionally, subblock interleaving is implemented as algorithm presented in \cite{3gpp.38.212}. Computation complexity of interleaving indexes huge due to the use of multiplication, division and modulus operations. To subblock interleaver block minor optimizations such as avoiding expensive operations such as multiplication/division/modulus and replacing them with right or left shift operations are performed.
+
+\section{Rate matching}
+Rate matching block calculates $E$ bits out of $N$ bits. Value of $E$ relative to $N$ determines the mode of rate matching. There can be three modes namely repetition,shortening and puncturing. For the scenarios where $E \geq N$ repetition is applied otherwise either puncturing or shortening needs to be done. Through empirical measurements it is found that for high rates shortening performs better and puncturing for low rates. Rate matching is performed by a circular buffer as given in \cite{DesignOfPolarCodes5G}.\newline
+
+Major optimizations in rate matching block, mainly avoiding copy operations instead change the pointers for cases shortening/puncturing and repetition. Further optimizations include using compiler primitives as hint to reduce the branchings and copying data blockwise instead of element wise for repetition mode of rate matching. Blockwise copying is efficient since it can employ SIMD instructions and also it avoids usage of modulus operation in repetition mode.
+
+\section{Channel interleaver}
+5G standard specifies channel interleaver for higher order modulations for better error correction performance \cite{3gpp.TSG-RAN_WG1}. In downlink, PBCH/PDCCH use only QPSK, hence channel interleaving is disabled using a parameter $I\_BIL$ setting it to zero disables the channel interleaver. For uplink channels such as PUCCH/PDSCH higher modulations can be used. In those scenarios channel interleaving is enabled. This work focuses mainly on PDCCH/PBCH channels so interleaving block contribution to latency is zero, since it is disabled. There are no optimizations performed for this block in the FEC chain.
+
+\section{Miscellaneous optimizations}
+In addition to above described major improvements, many micro-optimizations are performed. Few examples are \newline
+$\bullet $ Avoiding multiplication/division/modulus operations and achieving the same using bitwise operators.\newline
+$\bullet $ Implemented approximate versions $log_{2}x$ and exponential functions to reduce the number of floating point multiplications.\newline
+$\bullet $ Avoided jump functions to reduce flushing of the instruction pipeline.\newline
+$\bullet $ Using the compiler optimization primitives to reduce branches in the program.\newline
 
 \section{Results Comparison}
 
-\subsubsection{PDCCH FEC chain}
-Parameters of the FEC chain are n\_max = 9, I\_IL = 1, n\_pc = 0, n\_pc\_wm = 0, I\_BIL = 0, L = 24, E = 423, K = 106.
-This is not the worst case, These are the values for parameters specified above.
-\begin{table}[!h]
-	\begin{center}
-		\caption{Latency comparison: PDCCH FEC chain}
-		\label{tab:pdcchFecChain}
-		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
-			\textbf{ } & Functional & Optimized \\
-			\hline
-			Latency ($\mu$s) & $162$ & $19$\\
-		\end{tabular}
-	\end{center}
-\end{table}
-
-\NOTE{PBCH with google benchmark naive = 104us, Optimized = 7.2us, Google benchmark gives reliable reproducible numbers}
-
 \subsubsection{PBCH FEC chain}
-Parameters of the FEC chain are n\_max = 9, I\_IL = 1, n\_pc = 0, n\_pc\_wm = 0, I\_BIL = 0, L = 24, E = 864, K = 32.
-This is not the worst case, These are the values for parameters specified above.
-\begin{table}[!h]
+Parameters of the FEC chain are \newline
+$n_{max} = 9, I_{IL} = 1, n_{pc} = 0, n_{pc}^{wm} = 0, I_{BIL} = 0, L = 24, E = 864, K = 32$
+\begin{table}[h]
 	\begin{center}
 		\caption{Latency comparison: PDCCH FEC chain}
 		\label{tab:pbchFecChain}
@@ -388,8 +380,39 @@ This is not the worst case, These are the values for parameters specified above.
 	\end{center}
 \end{table}
 
-\NOTE{PBCH with google benchmark naive = 30us, Optimized = 2.3us, Google benchmark gives reliable reproducible numbers}
+%\NOTE{PBCH with google benchmark naive = 30us, Optimized = 2.3us, Google benchmark gives reliable reproducible numbers average}
 
-Worst case latency was for the parameters, 
-I\_IL = 1, n\_max = 10, n\_pc = 0 ,n\_pc\_wm = 0, I\_BIL = 1, E = 846, K = 106
-Naive 451us, Optimized 40us.
+\subsubsection{PDCCH FEC chain}
+Parameters of the FEC chain are \newline
+$n_{max} = 9, I_{IL} = 1, n_{pc} = 0, n_{pc}^{wm} = 0, I_{BIL} = 0, L = 24, E = 423, K = 106$
+\begin{table}[h]
+	\begin{center}
+		\caption{Latency comparison: PDCCH FEC chain}
+		\label{tab:pdcchFecChain}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Functional & Optimized \\
+			\hline
+			Latency ($\mu$s) & $162$ & $19$\\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+%\NOTE{PDCCH with google benchmark naive = 104us, Optimized = 7.2us, Google benchmark gives reliable reproducible numbers average} \newline
+
+To obtain overall picture of improvement from all the above optimizations it is worthwhile to look at worst case latencies of the FEC chain which is with maximum block size ($N = 1024$), puncturing (requires more time to identify reliability indices as well as for rate matching) and with both input bit-interleaving and channel-interleaver. Following table gives a comparison between naive and optimized versions.
+
+Worst case latency FEC chain parameters, \newline
+$I_{IL} = 1, n_{max} = 10, n_{pc} = 0 ,n_{pc}^{wm} = 0, I_{BIL} = 1, E = 846, K = 106$.
+\begin{table}[h]
+	\begin{center}
+		\caption{Worst case latency comparison: Polar FEC chain}
+		\label{tab:worstFecChain}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Functional & Optimized \\
+			\hline
+			Latency ($\mu$s) & $451$ & $40$\\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\NOTE{Does it make sense to include average latency of each FEC chain in addition to worst case latency? Feedback needed}
