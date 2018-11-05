@@ -51,6 +51,7 @@
 	\RequirePackage[ruled,linesnumbered]{algorithm2e}
 	\RequirePackage{mathtools}
 	\RequirePackage{caption}
+	\RequirePackage{hyperref}		%For chapter cross referencing
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}
