@@ -37,14 +37,12 @@ Inverse rate matching step maps the $E$ LLR values to mother code block size $ N
 \section{Sub-block de-interleaver}
 After inverse rate matching, $E$ values are mapped to $N$ LLRs, which is always a power of two. Subblock interleaver/deinterlever divides block of $N$ LLRs into $32$ subblocks, each containing $\frac{N}{32}$ LLRs. These subblocks are interleaved as shown in the figure \NOTE{add figure}. Functionally, subblock deinterleaving can be implemented as a inverse operation of algorithm presented in \cite{3gpp.38.212}. Upon measuring the latency contribution of subblock deinterleaver it was found to be taking $10 \mu s$. Computation complexity of interleaving indexes huge due to the use of multiplication, division and modulus operations. \newline
 
-
 \begin{figure}[]
 	\centering
 	\includegraphics[width=1.0\textwidth]{./figures/subblockDeinterleaver.pdf}
 	\caption{Subblock deinterleaving pattern}
 	\label{fig:subblockDeinterleaver}
 \end{figure}
-
 
 If we look at the figure ~\ref{fig:subblockDeinterleaver}, we can see that not all the values of LLRs are interleaved, only 18 positions out of 32. Calculating interleaving positions is expensive instead they can be pre-calculated and stored in a lookup table. For the mother code size of 1024, with pre-calculated positions interleaving requires looping for $ 576 $ times. Modern processors with \textit{AVX} and \textit{AVX2} extensions provide special swizzle instructions, which allow shuffling, permuting and blending of vectors. These instructions process vector of values hence allow data parallelism. To make use of swizzle instructions for subblock deinterleaving, it must be reformulated to fit into functionality provided by platform specific SIMD instructions. It is divided into three parts, each one is independent of another. Part one and three are exactly same operations each dealing with 8 subblocks and performing the operation marked by green in the figure. Part two deals with 16 subblocks, marked by blue in the figure. Part two operation is achieved with blend and permute SIMD instructions.
 
@@ -86,20 +84,6 @@ void subblockdeinterleaver64( int16_t y[], int16_t d[]) {
 \end{minted}
 \end{code}
 
-\begin{code}
-\captionof{listing}{Non-vectorized Subblock deinterleaving}
-\label{code:slowSubblockDeinterleaver}
-\begin{minted}{c}
-void subblockdeInterleaver( vector<int16_t> &y, vector<int16_t> &d) {
-	for (uint32_t n = 0; n < N; n++) {
-		uint32_t i = floor((n * 32 ) / N);
-		uint32_t Jn = P[i] * (N/32) + (n % (N/32));
-		d[Jn] = y[n];
-	}
-}
-\end{minted}
-\end{code}
-
 Results Latency optimization of subblock deinterleaver for $N = 1024$ is given the table ~\ref{tab:subblockDeinterleaverLatency}.
 \begin{table}[!h]
 	\begin{center}
@@ -114,37 +98,70 @@ Results Latency optimization of subblock deinterleaver for $N = 1024$ is given t
 \end{table}
 
 \section{Decoder optimization}
+This section discusses the details of decoder implementation and optimizations. Fast-SSC algorithm is considered due low complexity and ability to parallelize the decoding operations. Fast-SSC is an improved version basic SC algorithm. It identifies the special nodes which can be decoded without traversing the full tree. Special nodes are decoded efficiently using SIMD instructions which further reduces the decoding latency. Many software optimizations are performed. Each of them discussed in this section.
+
+\subsection{VN and CN operations}
+Polar decoding with Fast-SSC algorithm is equivalent to traversing binary tree. Every node in a tree involves one pair CN and VN operations. Result of CN operation is passed to left child and VN operation result to the right child. Number of nodes in a tree are exponential dependent on the block-length of a code. For block length of 1024 number nodes in a binary tree are 2047. Decoding requires 2047, CN and VN operations, hence it is very critical to implement CN and VN operations efficiently. In this work LLR's are quantized to 16-bit integers hence decoder is a 16-bit fixed point implementation. At each node, vector of LLRs is received from the parent node. CN and VN operations are performed on the received vector.
+
+\begin{code}
+\captionof{listing}{Vectorized CN operation}
+\label{code:CnOperartion}
+\begin{minted}{c++}
+template<unsigned int NvDash>
+void CnOp(int16_t alphaL[],int16_t demodLLRs[]) {
+  __m256i temp1,temp2,mag_temp1,mag_temp2;
+  _m_prefetch(alphaL);
+  _m_prefetch(demodLLRs);
+  for(unsigned i = 0; i < NvDash; i = i + 16) {
+	temp1 = _mm256_loadu_si256((__m256i*)(demodLLRs + i));
+	temp2 = _mm256_loadu_si256((__m256i*)(demodLLRs + NvDash + i));
+	mag_temp1 = _mm256_abs_epi16 (temp1);
+	mag_temp2 = _mm256_abs_epi16 (temp2);
+	mag_temp1 = _mm256_min_epi16 (mag_temp1, mag_temp2);
+	temp1 = _mm256_sign_epi16(temp1, temp2);
+	temp1 = _mm256_sign_epi16(mag_temp1, temp1);
+	_mm256_storeu_si256((__m256i*)(alphaL + i),temp1);
+  }
+}
+\end{minted}
+\end{code}
+\begin{code}
+\captionof{listing}{Vectorized VN operation}
+\label{code:VnOperartion}
+\begin{minted}{c++}
+template<unsigned int NvDash>
+void VnOp(int16_t alphaR[],int16_t demodLLRs[],int8_t betaL[]) {
+  __m256i alphaLeft,alphaRight,beta;
+  _m_prefetch(alphaR);
+  _m_prefetch(demodLLRs);
+  for(unsigned i = 0; i < NvDash; i = i + 16) {
+    alphaLeft = _mm256_loadu_si256((__m256i*)(demodLLRs + i));
+    alphaRight = _mm256_loadu_si256((__m256i*)(demodLLRs + i + NvDash));
+    beta = _mm256_cvtepu8_epi16(_mm_loadu_si128((__m128i*)(betaL + i)));
+    beta  = _mm256_slli_epi16(beta,15);
+    beta = _mm256_or_si256(beta,_mm256_set1_epi16(1));
+    alphaLeft = _mm256_sign_epi16(alphaLeft,beta);
+    alphaRight = _mm256_add_epi16(alphaRight,alphaLeft);
+    _mm256_storeu_si256((__m256i*)(alphaR + i),alphaRight);
+  }
+}
+\end{minted}
+\end{code}
+If CN operation needs to performed on received vector, naive method would be to access each value from the vector to perform the same CN operation. Sequentially performing CN and VN operations is very inefficient. Size of the vector received at each node is always a power of 2. Due to this fact CN and VN operations naturally fit vector processing units provided in the modern processors. In this work both CN and VN operations are efficiently implemented using SSE and AVX instruction extensions provided by AMD APYC platform. During CN and VN operations memory access is regular therefore data required in the future can be fetched to cache from main memory to reduce cache misses. Listing given in \ref{code:CnOperartion} and \ref{code:VnOperartion} show the efficient vectorized CN and VN operations.
+
 
 \subsection{Identifying component codes}
 %How different kind of sub code types are identified efficiently using with bit packed frozen bits.
-As explained in the beginning of this chapter, naive SC algorithm purely sequential, hence decoder introduces significant latency in the FEC chain. With improvements such as \cite{fastSSC} and \cite{SSC} decoding tree can be pruned by identifying particular patterns in frozen bit positions. Pruning of a tree allows decoding multiple bits in parallel. Component codes out of polar codes can be identified which allow decoding without traversing the full decoder tree. Authors in \cite{SSC} and \cite{fastSSC} identify four such codes namely rate-0, rate-1, repetition and single parity codes. Decoding a code word through component codes improves latency without compromising the error correction performance. However to fully enjoy the fruits decoding tree pruning, implementation should be able identify component codes efficiently. One simple functional way is to go through all frozen bits and search by comparing with predefined patterns. Naive way of searching for a pattern introduces significant latency in the decoding process. Processors with \textit{AVX} and \textit{AVX2} support contain registers which can store 256/128 bits in a single register. Frozen pattern array/vector contain either one or zero, one indicating frozen bit and zero information bit. Since one bit is enough to represent type of bit position, frozen pattern can be stored by packing multiple bits type information to single 256bit register which allows identifying a pattern by comparing with a integer using single SIMD instruction. As an example with a mother code size $N=256$ information about which position is frozen and which is not can stored in a single 256 bit SIMD register in a bit packed format. To check whether it is a rate-0, rate-1, SPC or RPC requires one SIMD comparison instruction. Snippet in a listing ~\ref{code:rateOneSIMDComparison} illustrates an example of identifying node type in bitpacked frozen bits pattern.
-
+As explained in the beginning of this chapter, naive SC algorithm purely sequential, hence decoder introduces significant latency in the FEC chain. With improvements such as \cite{fastSSC} and \cite{SSC} decoding tree can be pruned by identifying particular patterns in frozen bit positions. Pruning of a tree allows decoding multiple bits in parallel. Component codes out of polar codes can be identified which allow decoding without traversing the full decoder tree. Authors in \cite{SSC} and \cite{fastSSC} identify four such codes namely rate-0, rate-1, repetition and single parity codes. Decoding a code word through component codes improves latency without compromising the error correction performance. However to fully enjoy the fruits decoding tree pruning, implementation should be able identify component codes efficiently. One simple functional way is to go through all frozen bits and search by comparing with predefined patterns. Naive way of searching for a pattern introduces significant latency in the decoding process. Processors with \textit{AVX} and \textit{AVX2} support contain registers which can store 256/128 bits in a single register. Frozen pattern array/vector contain either one or zero, one indicating frozen bit and zero information bit. Since one bit is enough to represent type of bit position, frozen pattern can be stored by packing multiple bits type information to single 256bit register which allows identifying a pattern by comparing with a integer using single SIMD instruction. As an example with a mother code size $N=256$ information about which position is frozen and which is not can stored in a single 256 bit SIMD register in a bit packed format. To check whether it is a rate-0, rate-1, SPC or RPC requires one SIMD comparison instruction. Snippet in a listing ~\ref{code:rateZeroSIMDComparison} illustrates an example of identifying node type in bitpacked frozen bits pattern.
 \begin{code}
-	\captionof{listing}{Check for a rate-1 subcode}
-	\label{code:rateOneSIMDComparison}
+	\captionof{listing}{Checking rate-0 node}
+	\label{code:rateZeroSIMDComparison}
 	\begin{minted}{c++}
 template<>
-inline int identify_pattern<256>(uint64_t s[],nodeType node) {
+inline int identify_R0<256>(uint64_t s[]) {
 	__m256i temp1 = _mm256_loadu_si256 ((__m256i*)s);
 	__m256i temp2;
-	switch(node) {
-	case nodeType::R_0:
-		temp2 = _mm256_set1_epi8 ((char)0xFF);
-		break;
-	case nodeType::R_1:
-		temp2 = _mm256_set1_epi8 (0x00);
-		break;
-	case nodeType::REP:
-		temp2 = _mm256_set_epi64x(0xFFFFFFFFFFFFFFFFLL,0xFFFFFFFFFFFFFFFFLL,...
-				0xFFFFFFFFFFFFFFFFLL,0xFFFFFFFFFFFFFFFELL);
-		break;
-	case nodeType::SPC:
-		temp2 = _mm256_set_epi64x(0x8000000000000000LL,0x0000000000000000LL,...
-				0x0000000000000000LL,0x0000000000000000LL);
-		break;
-	case nodeType::NO_NODE_TYPES:
-		std::cout<<"Invalid node type";
-	}
+	temp2 = _mm256_set1_epi8 ((char)0xFF);
 	__m256i pcmp = _mm256_cmpeq_epi64 (temp1, temp2);
 	unsigned bitmask = _mm256_movemask_epi8(pcmp);
 	return (bitmask == 0xffffffffU);
@@ -158,31 +175,48 @@ Rate-0 code is a special kind of node in a decoding tree in which all the descen
 \subsection{Decoding Rate-1 code}
 A node is considered as Rate-1 node, if all of its descendants in a decoder tree are information bits. In other words the Rate one node contains no frozen bits. Decoding of Rate-one can also be performed without traversing till the end of a decoder and hence avoiding significant number of VN and CN operation. However decoding Rate-1 node is not as straight forward as Rate-0 node. Decoding is done through threshold detection of all the LLRs and performing polar transform on the result to obtain decoded bits.
 
+\IncMargin{1.5em}
+\begin{algorithm}[]
+	\KwData{$\alpha_{v}^{N_v-1}$, $N_v$}
+	\KwResult{$y_{0}^{N_v-1}$, $\beta_{0}^{N_v-1}$}
+	\SetKwFunction{FMain}{decodeR1}
+	\SetKwProg{Fn}{function}{:}{}
+	\Fn{\FMain{$\alpha_{v}^{N_v-1}$,$y_{0}^{N_v-1}$, $\beta_{0}^{N_v-1}$}} {
+		\For{$i=0$ to $N_v-1$} {
+			$\beta_{v}[i] = \alpha_{v}[i] \ge 0$\;
+		}
+		$y_{0}^{N_v-1} = polarTransform(\beta_{0}^{N_v-1})$ \;
+	}
+	\caption{Rate-1 node decoding algorithm}
+	\label{algo:R1Decoding}
+\end{algorithm}
+\DecMargin{1.5em}
+
+Although Rate-1 nodes avoids CN and VN operations, decoding is not parallel. Decoder needs to go through each of the LLRs to decode the bits and finally perform polar transform. Both of which are costly operations. To improve the latency through data parallelism, threshold detection can make use of SIMD instructions. Threshold detection of a complete vector can be performed through single SIMD comparison instruction.This improves the parallelism factor to sixteen for 16-bit LLRs with {AVX2} instructions. The code snippet in listing ~\ref{code:rateOneNodeDecoding} presents an example where rate-1 node decoding is implemented using AVX instructions. Resulting in parallelism factor is eight.
+
 \begin{code}
 	\captionof{listing}{Decoding rate-1 subcode}
 	\label{code:rateOneNodeDecoding}
 	\begin{minted}{c++}
 template<unsigned Nv>
-void decodeR_1_simd(int16_t demodLLRs[],int8_t beta[],int8_t decodedBits[]) {
-  eIndex = 0;
+void decR_1(int16_t demodLLRs[],int8_t beta[],int8_t decodedBits[]) {
   __m128i temp1,tempDecodedVec;
   _m_prefetch(beta);
-  _m_prefetch(decodedBits + dIndex);
+  _m_prefetch(decodedBits);
   for(unsigned i = 0; i < Nv; i = i + 8) {
     temp1 = _mm_loadu_si128((__m128i*)(demodLLRs + i));
     tempDecodedVec = _mm_cmplt_epi16(temp1,zeros);
     tempDecodedVec = tempDecodedVec & _mm_set1_epi16(1);
     tempDecodedVec = _mm_packs_epi16(tempDecodedVec,_mm_setzero_si128());
     _mm_storeu_si128((__m128i*)(beta + i),tempDecodedVec);
-    _mm_storeu_si128((__m128i*)(decodedBits + dIndex + i),tempDecodedVec);
+    _mm_storeu_si128((__m128i*)(decodedBits + i),tempDecodedVec);
   }
-  polarTransform<Nv>(decodedBits + dIndex,decodedBits + dIndex);
-  dIndex += Nv;
+  polarTransform<Nv>(decodedBits,decodedBits);
 }
 \end{minted}
 \end{code}
 
-Although Rate-1 nodes avoids CN and VN operations, decoding is not parallel. Decoder needs to go through each of the LLRs to decode the bits and finally perform polar transform both of which are costly operations. To improve the latency through data parallelism, threshold detection can make use of SIMD instructions, which allow threshold detection of a vector through single SIMD comparison instruction.This improves the parallelism factor to sixteen for 16-bit LLRs with {AVX2} instructions. The code snippet in listing ~\ref{code:rateOneNodeDecoding} presents an example where rate-1 node decoding is implemented using AVX instructions resulting in parallelism factor of eight. Next step in decoding rate-1 node is performing polar transform operation. It is equivalent to performing polar encoding. As explained in the previous chapter, binary tree represents encoding process. Efficient polar transform implementation makes use of same optimizations techniques employed in encoder such as SIMD vectorization and look up table techniques.
+Next step in decoding rate-1 node is performing polar transform operation. It is equivalent to performing polar encoding. As explained in the previous chapter, binary tree represents encoding process. Efficient polar transform implementation makes use of same optimizations techniques employed in encoder such as SIMD vectorization and look up table techniques.
 
 \subsection{Decoding RPC code}
 Repetition code (RPC) is another type of sub code which be identified from polar code. It allows decoding multiple bits without tree full tree traversal. A node is considered as RPC when only one its right most descendent contains information and all remaining bits are frozen. Bit packed frozen pattern allows easy identification of RPC node. If frozen pattern at the node is equal to one then it is a RPC node. RPC node decoding is similar to simple repetition code decoding by adding all the LLRs and doing threshold detection for the sum.  Result of threshold detection is stored at information bit position and remaining bits at the node are set to zero.
@@ -230,7 +264,12 @@ SPC code uses same two operations (threshold detection and polar transform) as u
 \subsection{Partial unrolling of decoder}
 Recursive formulation decoders makes it easy to implement in addition to allowing reuse of hardware resources in FPGA/ASIC. Successive cancellation decoding algorithm for polar codes is formulated recursive form. However this formulation has huge disadvantage when it comes to software implementations. Every recursive function call in software requires new stack frame allocation and jump to a starting address of function. Both operations are expensive in terms of processor cycles. Authors in ~\cite{fastPolarDecodersAlgoImpl} propose unrolling of the decoder, hence avoiding recursive function calls and branch instructions. In polar FEC chain of 5G, full unrolling of decoder is not possible due to varying block-length and code rate requirements. Different code rate requirement makes it impossible to know frozen bit positions are compile time, hence it is necessary to dynamically identify presence special nodes in the decoder tree. In this work, partial decoding unrolling is done, i.e recursive function calls are completely avoided. Template concept of C++ language are used for auto unrolling of functions. However still branches are present which check for the presence special nodes in a tree. Partial unrolling also significantly reduced the decoding latency.
 
-\TODO{Add picture showing unrolled decoder here.}
+\begin{figure}[]
+	\centering
+	\includegraphics[width=1\textwidth]{./figures/unrolledDecoder.pdf}
+	\caption{Unrolled decoder}
+	\label{fig:unrolledDecoder}
+\end{figure}
 
 \subsection{Cache prefetching}
 Performance bottle necks in the modern processors lies in main memory access. To overcome this problem most of modern processors contain smaller fast memory called cache close to the processor. Addition of caches reduces the number of accesses to main memory. However due to the limited cache size it might happen that the requested data not being present in cache, which results in an event called cache-miss. Copied data from main memory to cache has a huge overhead. Cache miss overhead can be reduced by dealing with less memory allocation, in other words reusing the memory as much as possible. Some of the modern processors provide special non blocking instructions which allow cache line prefetching. If the memory access required is known, prefetching instruction can be issued well in advance by software before accessing memory. These instructions if used efficiently, can hide the memory access latency. In this work, decoder implementation is optimized for AMD EPYC platform, which provides cache prefetching instructions through $ \mathtt{3dnow} $ extensions. Due to regular memory access in polar decoder, prefetching instructions are used whenever possible to hide memory access latency.
@@ -238,16 +277,44 @@ Performance bottle necks in the modern processors lies in main memory access. To
 \subsection{Decoder tree pruning}
 Decoding latency can be further reduced by minimizing the number of nodes to be traversed in a decoder tree. This is achieved by pruning decoding tree intelligently at a particular level based on the given SNR and code rate. The level of pruning for a particular SNR and code can be determined through simulations. This information can be stored in a look up table which can be used later to determine the level pruning during decoding. Here decoder tree is pruned irrespective frozen pattern type. Main idea is to adoptively prune the decoding tree depending on the SNR and code rate in hand. Tree pruning level is determined before decoder starts, as decoding proceeds and reaches a particular level, frozen pattern is checked whether it matches any special patterns such as R0, R1, RPC or SPC. If it matches any of these patterns then decoding is performed accordingly otherwise further traversing the tree is avoided by decoding through threshold detection and then applying polar transform. This equivalent to performing a hard decision decoding at that node.
 
-%This pruning can also be viewed as a adoptive pruning to 
-
 \TODO{Further continuation of this section requires simulation results, estimating the level of pruning depending on SNR and code rate}
-
-\TODO{Here compare the decoding latency of this implementation and state of the art latency values}
 
 \TODO{Add the picture here showing pruning of decoding tree irrespective of node type}
 
 
-\subsection{Extract parity check bits}
+\subsection{Decoding latency comparison}
+Following tables represent decoding latency representations
+\begin{table}[!h]
+	\begin{center}
+		\caption{Latency comparison: Plain versus Optimized implementation}
+		\label{tab:decoderLatency}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Functional & Optimized \\
+			\hline
+			Latency ($\mu$s) & $283.4$ & $5.3$\\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\begin{table}[!h]
+		\begin{center}
+		\caption{Latency comparison: this work versus state of the art \cite{lowLatencySWPolarDec}}
+		\label{tab:decoderLatencyStateofTheART}
+		\begin{threeparttable}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & this work & \cite{lowLatencySWPolarDec}* \\
+			\hline
+			Latency ($\mu$s) & $5.3$ & $8$\\
+			\hline
+		\end{tabular}
+	\begin{tablenotes}\footnotesize
+		\item[*] Scaled according to frequency
+	\end{tablenotes}
+	\end{threeparttable}
+	\end{center}
+\end{table}
+
+\section{Extract parity check bits}
 Parity bits are useful for early termination when decoding performed through list algorithm otherwise they are not required. Polar decoder output is the transmitted codeword of mother code with a block-length $N$ including frozen, information bits and parity check bits. As specified in the 5G standard \cite{3gpp.38.212} for PUCCH three parity bits are calculated ($n_{PC} = 3$) two of these bits are placed in the two least reliable positions out of $K+n_{PC}$, $K+n_{PC}$ positions are most reliable out of $N$. Remaining one parity bit ($ n_{PC}^{wm} = 1 $) is placed in position which corresponds minimum hamming weight row of the polar code generator matrix. This position needs to be identified dynamically since it varies for different code rates. Identifying a minimum hamming weight row requires information about number of ones in each row of generator matrix. One way to know is by storing hamming weight of every row in a look up table and read the values of particular rows. Another way is to exploit the unique structure of the polar generator matrix, i.e number set bits in an integer representing the row index gives hamming weight of a particular row. For the latter method lookup table is not required. In the FEC chain implementation former method is implemented and it has following advantages over latter.
 
 \begin{itemize}  
@@ -257,7 +324,7 @@ Parity bits are useful for early termination when decoding performed through lis
 
 After extracting parity bits those positions are marked as frozen to ease the extraction of information bits.
 
-\subsection{Extract Info Bits}
+\section{Extract Info Bits}
 After extracting parity bits codeword of mother code with a block-length $N$ contains frozen and information bits. To obtain only information bits, again at the receiver highest reliability indices must be identified for the same parameters $E$, $K$ and $N$. Same algorithm presented in the encoding chain chapter is used for identifying reliability indices, information bits are read from $K$ most reliable positions out of $N$. There are two ways to extract information bits, One is to take most reliable positions sort them, extract information bits in the order of increasing reliability. Another method is using the previously created frozen pattern, read bits from the location where it contains zero (means that position has information bit). After extensive profiling its identified that sorting is more expensive than going through all $N$ values and reading information bits from non frozen locations. So latter method is included in the FEC chain.
 
 \section{CRC calculation}
@@ -265,4 +332,15 @@ For PUCCH and PUSCH, 5G standard specifies different CRC sizes depending on the 
 
 \section{Decoding FEC chain latency results}
 
-
+$I_{IL} = 0, n_{max} = 10, n_{pc} = 3 ,n_{pc}^{wm} = 1, I_{BIL} = 1, E = 1692, K = 512$.
+\begin{table}[!h]
+	\begin{center}
+		\caption{Latency comparison: Polar decoding FEC chain}
+		\label{tab:decodingFECChainLatency}
+		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
+			\textbf{ } & Functional & Optimized \\
+			\hline
+			Latency ($\mu$s) & $346.4$ & $30$\\
+		\end{tabular}
+	\end{center}
+\end{table}
