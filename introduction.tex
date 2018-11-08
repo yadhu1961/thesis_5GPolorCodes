@@ -3,37 +3,24 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Era of Computing and Wireless Communication}
-Ability of computing 
+Ability to perform computations has evolved tremendously from the day first computer was invented by charles babbage in the 19th century. By the end 19th century another important event occurred, in 1897 an italian inventor and engineer Guglielmo Marconi demonstrated radio's ability to maintain continuous contact with ships in english channel. Major breakthrough happened in the development of computers and wireless systems in 1948, when scientists at the Bell achieved ground breaking results. Claude E.~Shannon published his paper \emph{A mathematical theory of communication} and John Bardeen, Walter Brattain and William Shockley announced the invention of the \emph{transistor effect}. These two landmark events paved way for the widespread adoption of computers and wireless communication systems in numerous applications. Since then telecommunication industry has grown manifold fueled by the advancements in RF and transistor fabrication techniques, miniaturization and Very Large Scale Integration. These technological advances made computing devices smaller, cheaper and more reliable. Recent advances in wireless communication have allowed not only short distance communication such as cellular communication even billions of kilometers distance deep space communication. \newline
 
 
+Today computing devices and wireless systems have become integral parts of our society. They allow communication between people even from remote areas. Invention of Internet has enabled people to have access to world of information in their fingertips. Till recently, wireless devices were primarily used for information exchange between people. Today wireless applications are entering new avenues such as industrial automation, telemedicine, Autonomous driving. These applications demand ultra-reliability and ultra-low-latency. Latest mobile communication standard 5G took a giant step towards providing service for such critical applications. 5G has adopted several techniques to service stringent latency requirements. To name few, different OFDM numerologies, flexible frame structure et cetera. Traditionally to achieve stringent latency requirements wireless communication stacks are implemented in hardware, specifically in FPGAs/ASICs. Hardware implementations make use of implicit hardware-concurrency. However hardware implementations come with inherent non-flexibility, huge cost and high development time.
 
+Due to latest technological advancements in general-purpose computing, Modern processors come with a tremendous computation power. It is up to software engineer to efficiently harness this computational power. Modern processors come with special computing units to cater to specific application domains, namely vector processing units for signal processing applications. To achieve stringent latency requirements, it is very important that a software designer makes use of these additional processing elements and available optimization techniques.
 
-In 1948, scientists at the Bell Laboratories achieved two landmark research results:
-Claude E.~Shannon published his paper \emph{A mathematical theory of communication} and John Bardeen, Walter Brattain and William Shockley announced the invention of the \emph{transistor effect}.
+%Traditionally FEC chains are developed in hardware i.e FPGA’s or ASIC’s to achieve low latency and high throughput.
+%Development in FPGA/hardware requires more time and costly.
+%With recent advances in General Purpose Processors it is possible to achieve required latency and throughput with software implementations without custom hardware.
+%Software implementations are flexible and easy to maintain compared hardware implementations.
+%
+%However algorithms need to be adopted/optimized to efficiently implement in software.
+%
+%Recent advances in the modern processors such as SIMD units can be utilized to achieve low latency and high throughput.
 
-\cite{Arikan}
-
-A binomial distribution is shown in %Figure~\ref{fig:coin_bino}.
-
-%\begin{figure}[!htb]
-%    \centering
-%    \includegraphics[width=0.8\textwidth]{./figures/coin_bino.eps}
-%    \caption{PDF $p_N(N)$ of the number N of times that the head side is up.}
-%    \label{fig:coin_bino}
-%\end{figure}
-
-For further information, the reader is referred to~\cite{Cover}.\newline
-
-Traditionally FEC chains are developed in hardware i.e FPGA’s or ASIC’s to achieve low latency and high throughput.
-Development in FPGA/hardware requires more time and costly.
-With recent advances in General Purpose Processors it is possible to achieve required latency and throughput with software implementations without custom hardware.
-Software implementations are flexible and easy to maintain compared hardware implementations.
-
-However algorithms need to be adopted/optimized to efficiently implement in software.
-
-Recent advances in the modern processors such as SIMD units can be utilized to achieve low latency and high throughput.
-
-\section{Software implementation}
+\section{Polar FEC chain development in software}
+Latest 3GPP standard has adopted polar codes for encoding and decoding control channel information \cite{3gpp.38.212}.
 
 
 
