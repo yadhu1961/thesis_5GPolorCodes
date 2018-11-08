@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{Decoding FEC Chain} \label{chap:DecodingChain}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-In this chapter, implementation and optimization details of 5G polar decoding FEC are presented including challenges faced while achieving low latency decoding. In FEC chain, decoder is the critical part due to inherent sequential nature of polar decoding. $n^{th}$ bit is decoded by using all the previously decoded bits, hence $n^{th}$ bit depends on $0$ to $n-1$ bits. Due to sequential decoding process, significant latency is introduced by the decoder. This section presents the optimization techniques employed to improve decoding FEC chain latency, which include both algorithmic and platform specific optimizations. Each these techniques are explained in the respective sections where these are employed. In this work, FEC chain considered is part of the base station, therefore uplink control information is decoded at receiver. PUCCH (Physical uplink control channel) and PUSCH (Physical uplink shared channel) contain polar encoded information. Received signal after demodulation is quantized to 16-bit LLR (log likelihood ratio) values. Decoding is performed with LLR (Log likelihood ratio) values rather than probabilistic likelihoods due to their numerical stability and low computational complexity. Receiver side FEC chain is a reverse of the operations performed at transmitter. Figure ~\ref{fig:5grx_fec_chain} shows the receiver side polar decoding FEC chain.
+In this chapter, implementation and optimization details of 5G polar decoding FEC are presented including challenges faced while achieving low latency decoding. In the FEC chain, decoder is the critical part due to inherent sequential nature of polar decoding. $n^{th}$ bit is decoded by using all the previously decoded bits, hence $n^{th}$ bit depends on $0$ to $n-1$ bits. Due to sequential decoding process, significant latency is introduced by the decoder. This section presents the optimization techniques employed to improve decoding FEC chain latency, which include both algorithmic and platform specific optimizations. Each these techniques are explained in the respective sections where these are employed. In this work, FEC chain considered is part of the base station, therefore uplink control information is decoded at receiver. PUCCH (Physical uplink control channel) and PUSCH (Physical uplink shared channel) contain polar encoded information. Received signal after demodulation is quantized to 16-bit LLR (log likelihood ratio) values. Decoding is performed with LLR (Log likelihood ratio) values rather than probabilistic likelihoods due to their numerical stability and low computational complexity. Receiver side FEC chain is a reverse of the operations performed at transmitter. Figure ~\ref{fig:5grx_fec_chain} shows the receiver side polar decoding FEC chain.
 
 \begin{figure}[]
 	\centering
@@ -35,7 +35,7 @@ Inverse rate matching step maps the $E$ LLR values to mother code block size $ N
 %Software optimization in inverse rate matching is performed by Empirically it is observed that shi  type of rate matching is selected based on code rate.
 %
 \section{Sub-block de-interleaver}
-After inverse rate matching, $E$ values are mapped to $N$ LLRs, which is always a power of two. Subblock interleaver/deinterlever divides block of $N$ LLRs into $32$ subblocks, each containing $\frac{N}{32}$ LLRs. These subblocks are interleaved as shown in the figure \NOTE{add figure}. Functionally, subblock deinterleaving can be implemented as a inverse operation of algorithm presented in \cite{3gpp.38.212}. Upon measuring the latency contribution of subblock deinterleaver it was found to be taking $10 \mu s$. Computation complexity of interleaving indexes huge due to the use of multiplication, division and modulus operations. \newline
+After inverse rate matching, $E$ values are mapped to $N$ LLRs, which is always a power of two. Subblock interleaver/deinterlever divides block of $N$ LLRs into $32$ subblocks, each containing $\frac{N}{32}$ LLRs. Functionally, subblock deinterleaving can be implemented as a inverse of interleaving operation as presented in \cite{3gpp.38.212}. Upon measuring the latency contribution of subblock deinterleaver it was found to be taking $10 \mu s$. Computation complexity of interleaving indexes huge due to the use of multiplication, division and modulus operations. \newline
 
 \begin{figure}[]
 	\centering
@@ -44,7 +44,7 @@ After inverse rate matching, $E$ values are mapped to $N$ LLRs, which is always 
 	\label{fig:subblockDeinterleaver}
 \end{figure}
 
-If we look at the figure ~\ref{fig:subblockDeinterleaver}, we can see that not all the values of LLRs are interleaved, only 18 positions out of 32. Calculating interleaving positions is expensive instead they can be pre-calculated and stored in a lookup table. For the mother code size of 1024, with pre-calculated positions interleaving requires looping for $ 576 $ times. Modern processors with \textit{AVX} and \textit{AVX2} extensions provide special swizzle instructions, which allow shuffling, permuting and blending of vectors. These instructions process vector of values hence allow data parallelism. To make use of swizzle instructions for subblock deinterleaving, it must be reformulated to fit into functionality provided by platform specific SIMD instructions. It is divided into three parts, each one is independent of another. Part one and three are exactly same operations each dealing with 8 subblocks and performing the operation marked by green in the figure. Part two deals with 16 subblocks, marked by blue in the figure. Part two operation is achieved with blend and permute SIMD instructions.
+If we look at the figure ~\ref{fig:subblockDeinterleaver}, we can see that not all the values of LLRs are interleaved, only 18 positions out of 32. Calculating interleaving positions is expensive instead they can be pre-calculated and stored in a lookup table. For the mother code size of 1024, with pre-calculated positions interleaving requires looping for $ 576 $ times. Modern processors with \textit{AVX} and \textit{AVX2} extensions provide special swizzle instructions, which allow shuffling, permuting and blending of vectors. These instructions process vector of values hence allow data parallelism. To make use of swizzle instructions for subblock deinterleaving, it must be reformulated to fit into functionality provided by platform specific SIMD instructions. It is divided into three parts, each one is independent of another. Part one and three are exactly same operations each dealing with 8 subblocks and performing the operation marked by green in the figure. Part one and three are mapped to shuffle SIMD instructions. Part two deals with 16 subblocks, marked by blue in the figure. Part two operation is achieved with blend and permute SIMD instructions.
 
 Code snippet in the listing ~\ref{code:subblockDeinterleaver} shows sample SIMD implementation of subblock deinterleaving operation for mother code size ($N$) 64.
 
@@ -275,10 +275,11 @@ Recursive formulation decoders makes it easy to implement in addition to allowin
 Performance bottle necks in the modern processors lies in main memory access. To overcome this problem most of modern processors contain smaller fast memory called cache close to the processor. Addition of caches reduces the number of accesses to main memory. However due to the limited cache size it might happen that the requested data not being present in cache, which results in an event called cache-miss. Copied data from main memory to cache has a huge overhead. Cache miss overhead can be reduced by dealing with less memory allocation, in other words reusing the memory as much as possible. Some of the modern processors provide special non blocking instructions which allow cache line prefetching. If the memory access required is known, prefetching instruction can be issued well in advance by software before accessing memory. These instructions if used efficiently, can hide the memory access latency. In this work, decoder implementation is optimized for AMD EPYC platform, which provides cache prefetching instructions through $ \mathtt{3dnow} $ extensions. Due to regular memory access in polar decoder, prefetching instructions are used whenever possible to hide memory access latency.
 
 \subsection{Decoder tree pruning}
-Decoding latency can be further reduced by minimizing the number of nodes to be traversed in a decoder tree. This is achieved by pruning decoding tree intelligently at a particular level based on the given SNR and code rate. The level of pruning for a particular SNR and code can be determined through simulations. This information can be stored in a look up table which can be used later to determine the level pruning during decoding. Here decoder tree is pruned irrespective frozen pattern type. Main idea is to adoptively prune the decoding tree depending on the SNR and code rate in hand. Tree pruning level is determined before decoder starts, as decoding proceeds and reaches a particular level, frozen pattern is checked whether it matches any special patterns such as R0, R1, RPC or SPC. If it matches any of these patterns then decoding is performed accordingly otherwise further traversing the tree is avoided by decoding through threshold detection and then applying polar transform. This equivalent to performing a hard decision decoding at that node. two levels of pruning are investigated in this work namely 8 and 4. Pruning level is decided based on SNR and code rate.
-Pruning at level 8 reduces the decoding latency from 5.3us to 4.0us and pruning at level 4 reduces latency to 5us from 5.3us (average values). Pruning comes at the expense of error correction performance. However in the scenarios where code rate is low and SNR is good, decoder tree can be safely pruned without losing error correction performance.
+Decoding latency can be further reduced by minimizing the number of nodes to be traversed in a decoder tree. This is achieved by pruning decoding tree intelligently at a particular level based on the given SNR and code rate. The level of pruning for a particular SNR and code can be determined through simulations. This information is included in the implementation to determine the pruning level during decoding. Here decoder tree is pruned irrespective frozen pattern type. Main idea is to adoptively prune the decoding tree depending on the SNR and code rate in hand. Tree pruning level is determined before decoder starts, as decoding proceeds and reaches a particular level, frozen pattern is checked whether it matches any special patterns such as R0, R1, RPC or SPC. If it matches any of these patterns then decoding is performed accordingly otherwise further traversing the tree is avoided by decoding through threshold detection and then applying polar transform. This is equivalent to performing a hard decision decoding at that node. two levels of pruning are investigated in this work namely 8 and 4. Pruning level is decided based on SNR and code rate.
 
-\TODO{Further continuation of this section requires simulation results, estimating the level of pruning depending on SNR and code rate}
+Pruning at level 8 reduces the decoding latency from 5.3us to 4.0us and pruning at level 4 reduces latency to 5us from 5.3us (average values). Pruning comes at the expense of error correction performance. However for the scenarios where code rate is low and SNR is good, decoder tree can be safely pruned without losing significant error correction. performance.
+
+%\TODO{Further continuation of this section requires simulation results, estimating the level of pruning depending on SNR and code rate}
 
 \begin{figure}[]
 	\centering
@@ -286,6 +287,20 @@ Pruning at level 8 reduces the decoding latency from 5.3us to 4.0us and pruning 
 	\caption{Pruned decoder tree}
 	\label{fig:prunedDecoderTree}
 \end{figure}
+
+%\begin{figure}[]
+%	\centering
+%	\includegraphics[width=0.7\textwidth]{./figures/rateCurves4.eps}
+%	\caption{Pruned code error correction performance}
+%	\label{fig:pruningLevelVsRate4}
+%\end{figure}
+%
+%\begin{figure}[]
+%	\centering
+%	\includegraphics[width=0.7\textwidth]{./figures/rateCurves5.eps}
+%	\caption{Pruned code error correction performance}
+%	\label{fig:pruningLevelVsRate5}
+%\end{figure}
 
 \subsection{Decoding latency comparison}
 Following tables represent decoding latency representations
