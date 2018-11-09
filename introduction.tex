@@ -20,7 +20,13 @@ Due to latest technological advancements in general-purpose computing, Modern pr
 %Recent advances in the modern processors such as SIMD units can be utilized to achieve low latency and high throughput.
 
 \section{Polar FEC chain development in software}
-Latest 3GPP standard has adopted polar codes for encoding and decoding control channel information \cite{3gpp.38.212}.
+Commonly high performance signal processing and error correction applications are implemented in hardware either in FPGAs/ASICs. Hardware implementations allow these applications to achieve low latency and high throughput. Algorithms in these applications are developed targeting hardware implementations. These algorithms implemented without any reformulation or modification result in poor performance. Therefore algorithms need to be modified and reformulated to achieve expected performance in software.
+
+Optimizations for hardware such as recursive formulation, reducing look up tables (LUTs) and flip flops target different set of goals than which are not always relevant in software. Let's try to conflict in the optimizations targeted for hardware and software. In encoder/decoder implementations algorithms are formulated in recursive form. In hardware implementations 
+
+
+
+Latest 3GPP standard has adopted polar codes for encoding and decoding control channel information \cite{3gpp.38.212}. Downlink control information (DCI) and Uplink control information (UCI) are transmitted using polar codes.
 
 
 
