@@ -48,7 +48,15 @@ Bhattacharyya parameter is given by
 
 Bhattacharyya parameter indicates how unreliable the channel is, It is easy see that $Z(W)$ takes values between $[0,1]$ better the channel smaller is the $Z(W)$. Polarization creates channels with $Z(W)$ of 0 or 1.
 
-\TODO{Here Give one example channel polarization for BEC channel and show the evolution of channel reliabilities. may be include a insert a picture with evolution of channel reliabilities plot. Does this make sense?}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=1\textwidth]{./figures/channel_polarization_plot.pdf}
+	\caption{Channel polarization example for binary erasure channel with $\epsilon = 0.4$}
+	\label{fig:channelPolarizationPlot}
+\end{figure}
+
+Figure \ref{fig:channelPolarizationPlot} illustrates channel polarization for different block lengths for binary erasure channel with erasure probability $\epsilon = 0.4$. It can be seen that as block-length increases channels gets polarized to extremal channels (either completely reliable or unreliable).
 
 
 \subsection{Encoding} \label{polarEncoding}
