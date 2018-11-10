@@ -48,7 +48,6 @@ Bhattacharyya parameter is given by
 
 Bhattacharyya parameter indicates how unreliable the channel is, It is easy see that $Z(W)$ takes values between $[0,1]$ better the channel smaller is the $Z(W)$. Polarization creates channels with $Z(W)$ of 0 or 1.
 
-
 \begin{figure}[h]
 	\centering
 	\includegraphics[width=1\textwidth]{./figures/channel_polarization_plot.pdf}
@@ -57,7 +56,6 @@ Bhattacharyya parameter indicates how unreliable the channel is, It is easy see 
 \end{figure}
 
 Figure \ref{fig:channelPolarizationPlot} illustrates channel polarization for different block lengths for binary erasure channel with erasure probability $\epsilon = 0.4$. It can be seen that as block-length increases channels gets polarized to extremal channels (either completely reliable or unreliable).
-
 
 \subsection{Encoding} \label{polarEncoding}
 After polar code constructions, Out of $N$ bit positions information bits are placed in the most reliable bit indices position and non reliable bit positions are called frozen bits whose values are set to zero. This $N$-bit vector $U$ is multiplied with generator matrix obtained by the kronecker power of Arikan kernel matrix. Multiplying with generator matrix can also be represented as circuit form. Arikan kernel matrix can also be represented in circuit form as shown in figure \ref{fig:butterFlyCicuit} also called butter fly circuit.

@@ -88,7 +88,19 @@ Some instructions which are used for fast packing and unpacking are:
 \end{minted}
 \end{code}
 
-\TODO{Give example code snippet which packs and unpacks bits in an efficient manner.}
+\begin{code}
+	\captionof{listing}{Sample packing/unpacking example}
+	\label{code:packUnpackExample}
+	\begin{minted}{c++}
+template<>
+inline int8_t packBits<8>(int8_t s[]) {
+	__m64 v8 = _mm_set_pi8(s[0],s[1],s[2],s[3],s[4],s[5],s[6],s[7]);	
+	uint8_t idx = _mm_movemask_pi8(_mm_slli_si64(v8, 7));
+}
+\end{minted}
+\end{code}
+
+Listing \ref{code:packUnpackExample} shows an example of bit packing. It receives vector of size 8, containing 8-bit integers each representing a bit. Returns one bit-packed one 8-bit integer.
 
 \section{CRC calculation}
 %Explain why CRC attachment is considered in whole FEC chain, how it is useful for decoding polar codes. Explain algorithmic complexity of CRC calculation, How much time it was taking, How the optimization is carried out to reduce the CRC calculation time.
