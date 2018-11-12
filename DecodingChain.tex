@@ -185,7 +185,7 @@ A node is considered as Rate-1 node, if all of its descendants in a decoder tree
 \end{algorithm}
 \DecMargin{1.5em}
 
-Although Rate-1 nodes avoids CN and VN operations, decoding is not parallel. Decoder needs to go through each of the LLRs to decode the bits and finally perform polar transform. Both of which are costly operations. To improve the latency through data parallelism, threshold detection can make use of SIMD instructions. Threshold detection of a complete vector can be performed through single SIMD comparison instruction. This improves the parallelism factor to sixteen for 16-bit LLRs with {AVX2} instructions. The code snippet in listing ~\ref{code:rateOneNodeDecoding} presents an example where rate-1 node decoding is implemented using AVX instructions. Resulting parallelism factor is eight.
+Although Rate-1 nodes avoids CN and VN operations, decoding is not parallel. Decoder needs to go through each of the LLRs to decode the bits and finally perform polar transform. Both of which are costly operations. To improve the latency through data parallelism, threshold detection can make use of SIMD instructions. Threshold detection of a complete vector can be performed through single SIMD comparison instruction. This improves the parallelism factor to sixteen for 16-bit LLRs with {AVX2} instructions. The code snippet in listing ~\ref{code:rateOneNodeDecoding} presents an example where rate-1 node decoding is implemented using AVX instructions. Resulting parallelism factor is eight. \newpage
 
 \begin{code}
 	\captionof{listing}{Decoding rate-1 subcode}
