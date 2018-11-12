@@ -41,13 +41,17 @@
     % more information on amsmath: http://www.ctan.org/get/macros/latex/required/amslatex/math/amsldoc.pdf
     \RequirePackage{psfrag}         % psfrag: http://www.ctan.org/get/macros/latex/contrib/psfrag/pfgguide.pdf
     \RequirePackage{subfigure}      % enable subfigures / Ermoeglicht Subfigures (mehrere Figures neben/untereinander)
-    \RequirePackage{titlesec}		%Yadhu added
-	\RequirePackage{varwidth}		%Yadhu added
+%    \RequirePackage{titlesec}		%Yadhu added
+%	\RequirePackage{varwidth}		%Yadhu added
 	\RequirePackage{enumitem}		%Yadhu added for bullets
-	\RequirePackage{Listings}		%Yadhu added for code snippets
+	\RequirePackage[newfloat]{minted}		%Yadhu added for code snippets
+%	\RequirePackage{pygmentize}	% For minted
 	\RequirePackage{xcolor}
-	\RequirePackage[parfill]{parskip}
+%	\RequirePackage[parfill]{parskip}
 	\RequirePackage[ruled,linesnumbered]{algorithm2e}
+	\RequirePackage{mathtools}
+	\RequirePackage{caption}
+	\RequirePackage{threeparttable}		%For chapter cross referencing
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}

@@ -1,5 +1,6 @@
 %Journal, transaction, magazine article
-\bibliographystyle{unsrt}
+%\bibliographystyle{unsrt}
+\nocite{*}
 
 @ARTICLE{Arikan,
 	author={E. Arikan},
@@ -162,6 +163,16 @@
 	url = {http://www.3gpp.org/ftp/Specs/archive/38_series/38.212/},
 	year = {2018}
 }
+@techreport{3gpp.TSG-RAN_WG1,
+	author = {Qualcomm},
+	institution = {{3rd Generation Partnership Project (3GPP)}},
+	month = {May},
+	note = {Meeting 89},
+	number = {7.1.4.2.1.3},
+	title = {{Interleaver design for Polar Codes}},
+	type = {Discussion/Decision},
+	year = {2017}
+}
 
 @article{Sarwate:1988:CCR:63030.63037,
 	author = {Sarwate, D. V.},
@@ -216,6 +227,20 @@
 	month={Oct},
 }
 
+@ARTICLE{URLLC_5G,
+	author={H. Ji and S. Park and J. Yeo and Y. Kim and J. Lee and B. Shim},
+	journal={IEEE Wireless Communications},
+	title={Ultra-Reliable and Low-Latency Communications in 5G Downlink: Physical Layer Aspects},
+	year={2018},
+	volume={25},
+	number={3},
+	pages={124-130},
+	keywords={5G mobile communication;synchronisation;telecommunication network reliability;telecommunication scheduling;URLLC;air interface;5G NR downlink;physical layer issues;low-latency communications;ultra-reliable communications;3GPP release 15 standardization;New Radio;Reliability;Physical layer;5G mobile communication;Scheduling;3GPP;Long Term Evolution;Channel estimation},
+	doi={10.1109/MWC.2018.1700294},
+	ISSN={1536-1284},
+	month={JUNE},
+}
+
 @INPROCEEDINGS{betaExpansion,
 	author={G. He and J. Belfiore and I. Land and G. Yang and X. Liu and Y. Chen and R. Li and J. Wang and Y. Ge and R. Zhang and W. Tong},
 	booktitle={GLOBECOM 2017 - 2017 IEEE Global Communications Conference},
@@ -244,6 +269,26 @@
 	month={March},
 }
 
+@article{lowLatencySWPolarDec,
+	author = {Giard, Pascal and Sarkis, Gabi and Leroux, Camille and Thibeault, Claude and Gross, Warren J.},
+	title = {Low-Latency Software Polar Decoders},
+	journal = {J. Signal Process. Syst.},
+	issue_date = {May       2018},
+	volume = {90},
+	number = {5},
+	month = may,
+	year = {2018},
+	issn = {1939-8018},
+	pages = {761--775},
+	numpages = {15},
+	url = {https://doi.org/10.1007/s11265-016-1157-y},
+	doi = {10.1007/s11265-016-1157-y},
+	acmid = {3220830},
+	publisher = {Kluwer Academic Publishers},
+	address = {Norwell, MA, USA},
+	keywords = {Polar codes, Software decoders, Successive-cancellation decoding},
+} 
+
 %PhD thesis
 @PhdThesis{Sarkis,
 	author = 	 {Gabi Sarkis},
@@ -252,6 +297,20 @@
 	year = 	 {2016},
 	address = 	 {Montreal, Canada},
 	month = 	 April
+}
+
+@Booklet{CMP,
+	title = 	 {Chip Multi Core Processors},
+	author = 	 {Andreas Herkersdorf},
+	howpublished = {Lecture Notes, Institute for Integrated Systems, Technische Universit{\"a}t M{\"u}nchen},
+	year = 	 {2017}
+}
+
+@Booklet{SoCT,
+	title = 	 {System on Chip Technologies},
+	author = 	 {Andreas Herkersdorf},
+	howpublished = {Lecture Notes, Institute for Integrated Systems, Technische Universit{\"a}t M{\"u}nchen},
+	year = 	 {2016}
 }
 
 %Technical report
@@ -264,8 +323,37 @@
 }
 
 %Internet resources
-@Electronic{DeltaFunction,
-	author = 	 {E.~Weisstein},
-	title = 	 {Delta Function},
-	url = {http://mathworld.wolfram.com/DeltaFunction.html}
+@Electronic{MatrixMultComplexity,
+	author = 	 {Wikipedia},
+	title = 	 {Matrix Multiplication},
+	url = {https://en.wikipedia.org/wiki/Matrix_multiplication#Complexity}
+}
+@Electronic{SIMDWiki,
+	author = 	 {Wikipedia},
+	title = 	 {SIMD},
+	url = {https://en.wikipedia.org/wiki/SIMD}
+}
+
+@Electronic{kronecker,
+	author = 	 {Wikipedia},
+	title = 	 {Kronecker product},
+	url = {https://en.wikipedia.org/wiki/Kronecker_product}
+}
+
+@Electronic{IntelIntrinsics,
+	author = 	 {Intel},
+	title = 	 {Intel Intrinsics Guide},
+	url = {https://software.intel.com/sites/landingpage/IntrinsicsGuide/}
+}
+
+@Electronic{5G_TTI,
+	author = 	 {www.sharetechnote.com},
+	title = 	 {5G - Frame Structure},
+	url = {http://www.sharetechnote.com/html/5G/5G_FrameStructure_Candidate.html}
+}
+
+@Electronic{amdEpyc,
+	author = 	 {www.amd.com},
+	title = 	 {AMD EPYC procesor datasheet},
+	url = {https://www.amd.com/system/files/2017-06/AMD-EPYC-Data-Sheet.pdf}
 }
