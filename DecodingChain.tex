@@ -280,7 +280,7 @@ Every non-leaf node in the decoder performs bit combine operation to obtain $\be
 \subsection{Decoder tree pruning}
 Decoding latency is further reduced by minimizing the number of nodes to be traversed in a decoder tree. This is achieved by pruning decoding tree intelligently at a particular level based on the given SNR and code rate. The level of pruning for a particular SNR and code can be determined through simulations. This information is included in the implementation to determine the pruning level during decoding. Here decoder tree is pruned irrespective frozen pattern type. Main idea is to adoptively prune the decoding tree depending on the SNR and code rate in hand. Tree pruning level is determined before decoder starts. As decoding proceeds and reaches a particular level, frozen pattern is checked whether it matches any special patterns such as R0, R1, RPC or SPC. If it matches any of these patterns then decoding is performed accordingly. If not further traversing the tree is avoided by decoding through threshold detection and then applying polar transform. This is equivalent to performing a hard decision decoding at that node. two levels of pruning are investigated in this work namely 8 and 4. Pruning level is decided based on SNR and code rate.
 
-Pruning at level 8 reduces the decoding latency from 5.3us to 4.0us and pruning at level 4 reduces latency to 5us from 5.3us (average values). Pruning comes at the expense of error correction performance. However for the scenarios where code rate is low and SNR is good, decoder tree can be safely pruned.
+Pruning at level 8 reduces the decoding latency from 5.3us to 4.0us and pruning at level 4 reduces latency to 5us from 5.3us (average values). Pruning comes at the expense of error correction performance. However for the scenarios where code rate is low and SNR is good, decoder tree can be safely pruned. Figure \ref{fig:pruningLevelVsRate5} shows the error correction performance versus pruning level plot for a code rate of 0.5.
 
 %\TODO{Further continuation of this section requires simulation results, estimating the level of pruning depending on SNR and code rate}
 
@@ -291,12 +291,12 @@ Pruning at level 8 reduces the decoding latency from 5.3us to 4.0us and pruning 
 	\label{fig:prunedDecoderTree}
 \end{figure}
 
-%\begin{figure}[]
-%	\centering
-%	\includegraphics[width=0.7\textwidth]{./figures/rateCurves4.eps}
-%	\caption{Pruned code error correction performance}
-%	\label{fig:pruningLevelVsRate4}
-%\end{figure}
+\begin{figure}[]
+	\centering
+	\includegraphics[width=0.7\textwidth]{./figures/matlabPlots/rate5Curves.eps}
+	\caption{Pruned code error correction performance for code rate 0.5}
+	\label{fig:pruningLevelVsRate5}
+\end{figure}
 %
 %\begin{figure}[]
 %	\centering
