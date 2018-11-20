@@ -364,7 +364,7 @@ $I_{IL} = 0, n_{max} = 10, n_{pc} = 3 ,n_{pc}^{wm} = 1, I_{BIL} = 1, E = 1692, K
 		\caption{Latency comparison: Polar decoding FEC chain}
 		\label{tab:decodingFECChainLatency}
 		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
-			\textbf{ } & Functional & Optimized \\
+			\textbf{ } & Naive & Optimized \\
 			\hline
 			Latency ($\mu$s) & $391$ & $40$\\
 		\end{tabular}
@@ -372,5 +372,4 @@ $I_{IL} = 0, n_{max} = 10, n_{pc} = 3 ,n_{pc}^{wm} = 1, I_{BIL} = 1, E = 1692, K
 \end{table}
 
 \section{Summary}
-
-\TODO{ADD SUMMARY SECTION}
+In this section, the polar decoding FEC chain is implemented. Each component of the FEC chain is analyzed to understand the complexity and latency contribution. After extensive analysis and code profiling, three major latency contributors are identified namely sub-block deinterleaving, polar decoding and CRC calculation. Sub-block deinterleaving is optimized through algorithm reformulation and mapping interleaving operations to specialized SIMD instructions. Biggest latency contributor in the decoding FEC chain is polar decoder. A number of optimizations are performed to reduce decoder latency. Optimizations which resulted in major latency reduction are SIMD implementation of CN, VN and bit combination operations and component code decoding, unrolling the decoder, avoiding superfluous copying and cache prefetching. CRC calculation is optimized through a lookup table and parallel bit processing. Above optimizations reduced the latency of the FEC chain by 10x compared to the naive implementation.

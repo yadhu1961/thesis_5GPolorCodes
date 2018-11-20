@@ -394,7 +394,7 @@ $n_{max} = 9, I_{IL} = 1, n_{pc} = 0, n_{pc}^{wm} = 0, I_{BIL} = 0, L = 24, E = 
 		\caption{Latency comparison: PBCH FEC chain}
 		\label{tab:pbchFecChain}
 		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
-			\textbf{ } & Functional & Optimized \\
+			\textbf{ } & Naive & Optimized \\
 			\hline
 			Latency ($\mu$s) & $53$ & $7$\\
 		\end{tabular}
@@ -410,7 +410,7 @@ $n_{max} = 9, I_{IL} = 1, n_{pc} = 0, n_{pc}^{wm} = 0, I_{BIL} = 0, L = 24, E = 
 		\caption{Latency comparison: PDCCH FEC chain}
 		\label{tab:pdcchFecChain}
 		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
-			\textbf{ } & Functional & Optimized \\
+			\textbf{ } & Naive & Optimized \\
 			\hline
 			Latency ($\mu$s) & $162$ & $19$\\
 		\end{tabular}
@@ -428,7 +428,7 @@ $I_{IL} = 1, n_{max} = 10, n_{pc} = 0 ,n_{pc}^{wm} = 0, I_{BIL} = 1, E = 846, K 
 		\caption{Worst case latency comparison: Polar FEC chain}
 		\label{tab:worstFecChain}
 		\begin{tabular}{c|c|c} % <-- Alignments: 1st column left, 2nd middle and 3rd right, with vertical lines in between
-			\textbf{ } & Functional & Optimized \\
+			\textbf{ } & Naive & Optimized \\
 			\hline
 			Latency ($\mu$s) & $451$ & $40$\\
 		\end{tabular}
@@ -436,5 +436,4 @@ $I_{IL} = 1, n_{max} = 10, n_{pc} = 0 ,n_{pc}^{wm} = 0, I_{BIL} = 1, E = 846, K 
 \end{table}
 
 \section{Summary}
-
-\TODO{ADD SUMMARY SECTION}
+In this section, we implemented the polar encoding FEC chain. Different components of the FEC chain are analyzed to understand the complexity and latency contributions. Through extensive analysis and code profiling, three major latency contributors are identified, namely CRC calculation, polar code construction, and polar encoding. All these components are optimized using algorithmic and platform-specific optimizations. The latency of CRC calculation is reduced by using lookup and exploiting the data parallelism. The biggest contributor to latency in the FEC chain is the polar code construction due to the presence of expensive search, remove and copy operations. The polar code construction algorithm is reformulated to reduce latency by avoiding above mentioned expensive operations. Polar encoding is another latency contributor. The encoder is optimized using a number of techniques. Significant optimizations include pruning encoder tree, implementing encoding with SIMD instructions, unrolling the recursive function and by avoiding superfluous copy operations. All the above-mentioned optimizations to FEC chain reduced the latency by 10x compared to naive implementation.
