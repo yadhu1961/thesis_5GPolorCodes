@@ -53,6 +53,7 @@
 	\RequirePackage{caption}
 	\RequirePackage{threeparttable}		%For chapter cross referencing
 	\RequirePackage{undertilde}
+	\RequirePackage{multirow}
 
 % Set chapter, section and subsection to regular LaTeX font
     \addtokomafont{sectioning}{\rmfamily}
