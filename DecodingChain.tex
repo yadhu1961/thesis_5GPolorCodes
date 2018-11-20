@@ -186,7 +186,7 @@ A node is considered as R1 node, if all of its descendants in a decoder tree are
 \end{algorithm}
 \DecMargin{1.5em}
 
-Although R1 nodes avoids CN and VN operations, decoding is not parallel. The decoder needs to go through each of the LLRs to decode the bits and finally perform polar transform. Both steps are costly operations. To improve the latency through data parallelism, threshold detection can make use of SIMD instructions. Threshold detection of a complete vector can be performed through single SIMD comparison instruction. This improves the parallelism factor to sixteen for 16-bit LLRs with {AVX2} instructions. The code snippet in listing ~\ref{code:rateOneNodeDecoding} presents an example where rate-1 node decoding is implemented using AVX instructions. Resulting parallelism factor is eight. \newpage
+Although R1 nodes avoids CN and VN operations, decoding is not parallel. The decoder needs to go through each of the LLRs to decode the bits and finally perform polar transform. Both steps are costly operations. To improve the latency through data parallelism, threshold detection can make use of SIMD instructions. Threshold detection of a complete vector can be performed through single SIMD comparison instruction. This improves the parallelism factor to sixteen for 16-bit LLRs with {AVX2} instructions. The code snippet in listing ~\ref{code:rateOneNodeDecoding} presents an example where rate-1 node decoding is implemented using AVX instructions. Resulting parallelism factor is eight.
 
 \begin{code}
 	\captionof{listing}{Decoding rate-1 subcode}
@@ -370,5 +370,7 @@ $I_{IL} = 0, n_{max} = 10, n_{pc} = 3 ,n_{pc}^{wm} = 1, I_{BIL} = 1, E = 1692, K
 		\end{tabular}
 	\end{center}
 \end{table}
+
+\section{Summary}
 
 \TODO{ADD SUMMARY SECTION}

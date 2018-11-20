@@ -388,7 +388,7 @@ $\bullet $ Using the compiler optimization primitives to reduce branches in the 
 
 \subsubsection{PBCH FEC chain}
 Parameters of the FEC chain are \newline
-$n_{max} = 9, I_{IL} = 1, n_{pc} = 0, n_{pc}^{wm} = 0, I_{BIL} = 0, L = 24, E = 864, K = 32$
+$n_{max} = 9, I_{IL} = 1, n_{pc} = 0, n_{pc}^{wm} = 0, I_{BIL} = 0, L = 24, E = 864, K = 56$
 \begin{table}[!h]
 	\begin{center}
 		\caption{Latency comparison: PBCH FEC chain}
@@ -404,7 +404,7 @@ $n_{max} = 9, I_{IL} = 1, n_{pc} = 0, n_{pc}^{wm} = 0, I_{BIL} = 0, L = 24, E = 
 %\NOTE{PBCH with google benchmark naive = 30us, Optimized = 2.3us, Google benchmark gives reliable reproducible numbers average}
 \subsubsection{PDCCH FEC chain} 
 Parameters of the FEC chain are \newline
-$n_{max} = 9, I_{IL} = 1, n_{pc} = 0, n_{pc}^{wm} = 0, I_{BIL} = 0, L = 24, E = 423, K = 106$ \TODO{EXPLAIN DIFFERENCE BETWEEN PBCH AND PDCCH}
+$n_{max} = 9, I_{IL} = 1, n_{pc} = 0, n_{pc}^{wm} = 0, I_{BIL} = 0, L = 24, E = 423, K = 106$
 \begin{table}[!h]
 	\begin{center}
 		\caption{Latency comparison: PDCCH FEC chain}
@@ -434,5 +434,7 @@ $I_{IL} = 1, n_{max} = 10, n_{pc} = 0 ,n_{pc}^{wm} = 0, I_{BIL} = 1, E = 846, K 
 		\end{tabular}
 	\end{center}
 \end{table}
+
+\section{Summary}
 
 \TODO{ADD SUMMARY SECTION}

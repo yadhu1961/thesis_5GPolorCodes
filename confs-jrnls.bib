@@ -1,0 +1,302 @@
+@COMMENT {
+
+% strings for additional journal titles and conferences
+% Author: Ulrich Schuster, Moritz Borgmann
+
+This file contains string definitions for journals and conferences
+these strings are not included in the IEEEabrv.bib file, and can be used in addition.
+
+identifiers:
+ J  = Journal
+ C  = Conference
+ CU = Conference (proceedings not yet available) (stands for "conference unpublished")
+
+Usage of conference identifiers
+before conference proceedings have appeared, include the following in the BibTeX record,
+as an example:
+
+  intype     = "presented at the",
+  booktitle  = IEEE_CU_GLOBECOM,
+
+after the proceedings have appeared, add the page numbers and volume, remove the intype
+field, and change the "CU" identifier in the conference macro to "C":
+
+  booktitle  = IEEE_C_GLOBECOM,
+  volume     = 1,
+  pages      = {142--148},
+
+See end of file for rules for abbreviation.
+
+### Cleaned by bibfix normalizer ###
+  command: bibclean --noexpandmacros --fixstrings  confs-jrnls.bib
+}
+
+% Journals
+@STRING{J_BLT             = "Bell Labs Tech.~J." }
+@STRING{J_BST             = "Bell Syst. Tech.~J." }
+@STRING{J_SPI             = "J. Statist. Planning Inference" }
+@STRING{J_ETT             = "Eur. Trans. Telecommun." }
+
+@STRING{J_AJM             = "Am. J. Math." }
+@STRING{J_ANNMATH         = "Annals Math." }
+@STRING{J_ANNPROB         = "Ann. Prob." }
+@STRING{J_AML             = "Appl. Math. Lett." }
+@STRING{J_AUT             = "Automatica" }
+@STRING{J_BIT             = "BIT" }
+@STRING{J_BAMS            = "Bull. Am. Math. Soc." }
+@STRING{J_CACM            = "Commun. ACM" }
+@STRING{J_CMP             = "Commun. Math. Phys." }
+@STRING{J_CPAM            = "Commun. Pure Appl. Math." }
+@STRING{J_COMPAM          = "Commun. Pure Appl. Math." }
+@STRING{J_IRE             = "Proc. IRE" }
+@STRING{J_JASA            = "J. Acoust. Soc. Am." }
+@STRING{J_JAMS            = "J. Am. Math. Soc." }
+@STRING{J_JAT             = "J. Approx. Theory" }
+@STRING{J_JAES            = "J. Audio Eng. Soc." }
+@STRING{J_JFI             = "J. Franklin Inst." }
+@STRING{J_JCAM            = "J. Comput. Appl. Math." }
+@STRING{J_JCP             = "J. Comput. Phys." }
+@STRING{J_JFAA            = "J. Fourier Anal. Appl." }
+@STRING{J_JFA             = "J. Funct. Anal." }
+@STRING{J_JIEE            = "J. IEE" }
+@STRING{J_JMAA            = "J. Math. Anal. Appl." }
+@STRING{J_JMIV            = "J. Math. Imag. Vision" }
+@STRING{J_JMP             = "J. Math. Phys." }
+@STRING{J_JMPA            = "J. Math. Pure Appl." }
+@STRING{J_JOS             = "J. Opt. Soc." }
+@STRING{J_JROYSA          = "J. Roy. Statist. Soc. Ser. A" }
+@STRING{J_JROYSB          = "J. Roy. Statist. Soc. Ser. B" }
+@STRING{J_JROYSC          = "J. Roy. Statist. Soc. Ser. C" }
+@STRING{J_JSV             = "J. Sound Vib." }
+@STRING{J_LNM             = "Lecture Notes in Math." }
+@STRING{J_LINALG          = "Linear Algebra Applicat." }
+@STRING{J_MC              = "Math. Comp." }
+@STRING{J_MM              = "Monatsh. Math." }
+@STRING{J_MN              = "Math. Nach." }
+@STRING{J_MS              = "Math. Scand." }
+@STRING{J_NM              = "Numer. Math." }
+@STRING{J_NA              = "Numer. Algor." }
+@STRING{J_OE              = "Opt. Eng." }
+@STRING{J_OPT             = "J. Optimization Theory Applicat." }
+@STRING{J_PJR             = "Philips J. Research" }
+@STRING{J_PAMS            = "Proc. Am. Math. Soc." }
+@STRING{J_PR              = "Phys. Rev." }
+@STRING{J_PRA             = "Phys. Rev. A" }
+@STRING{J_PRL             = "Phys. Rev. Lett." }
+@STRING{J_PRP             = "Phys. Rep." }
+@STRING{J_PTP             = "Prog. Theor. Phys." }
+@STRING{J_RMI             = "Rev. Mat. Iberoamericana" }
+@STRING{J_TAMS            = "Trans. Am. Math. Soc." }
+
+@STRING{J_WPC             = "Wireless Personal Commun." }
+
+@STRING{SIAM_J_AM         = "SIAM J. Appl. Math." }
+@STRING{SIAM_J_MA         = "SIAM J. Math. Anal." }
+@STRING{SIAM_J_MAA        = "SIAM J. Matrix Anal. Appl." }
+@STRING{SIAM_J_NA         = "SIAM J. Numer. Anal." }
+@STRING{SIAM_J_SC         = "SIAM J. Sci. Comp." }
+@STRING{SIAM_J_SSC        = "SIAM J. Sci. Statist. Comp." }
+@STRING{SIAM_JR           = "SIAM Rev." }
+
+@STRING{IEE_J_EL          = "Electron. Lett." }
+@STRING{IEE_J_COM         = "IEE Proc. Commun." }
+
+@STRING{EU_J_SP           = "EURASIP J. Signal Process." }
+@STRING{EU_J_ASP          = "EURASIP J. Appl. Signal Process." }
+@STRING{EU_J_WCN          = "EURASIP J. Wireless Commun. Netw." }
+
+% Legacy strings
+@STRING{J_EUSP            = EU_J_ASP }
+
+% Journals added by daniel
+@STRING{J_WPC             = "Wireless Personal Commun." }
+@STRING{J_LNCS            = "Lecture Notes in Comp. Sci." }
+@STRING{J_ASSA            = "Adv. in Syst. Sci. Appl." }
+@STRING{J_IJSNET          = "Int. J. Sens. Netw." }
+@STRING{J_JAIF            = "J. Adv. Inform. Fusion" }
+
+
+% Journals added by georg
+@STRING{J_WCMC            = "Wireless Commun. Mobile Comput."}
+@STRING{ACM_J_CCR         = "ACM SIGCOMM Comput. Commun. Review"}
+@STRING{J_ZAMP            = "Zeitschrift {f\"ur} Angewandte Mathematik und Physik"}
+@STRING{J_IC              = "Inf. Contr."}
+@STRING{IRE_J_IT          = "{IRE} Trans. Inf. Theory"}
+@STRING{J_CIS         = "Commun. Inf. Syst."}
+@STRING{J_ETT            =  "Eur. Trans. Telecommun."}
+@STRING{J_ACM            =  "J. ACM"}
+
+
+% Conferences (unpublished)
+if you use these macros, add
+  intype = "presented at the",
+to the bibtex entry (only works with IEEEtran.bst).
+@STRING{CU_ALLERTON       = "Allerton Conf. Commun., Contr., Comput." }
+@STRING{CU_ASILOMAR       = "Asilomar Conf. Signals, Syst., Comput." }
+@STRING{CU_CISS           = "Ann. Conf. Inf. Sci. and Syst. (CISS)" }
+@STRING{CU_EUSIPCO        = "Eur. Signal Process. Conf. (EUSIPCO)" }
+@STRING{CU_ICU            = "Int. Conf. Ultra-Wideband (ICU)" }
+@STRING{CU_ISITA          = "Int. Symp. Inf. Theory and its Applicat. (ISITA)" }
+@STRING{CU_IWUWBS         = "Int. Workshop Ultra-Wideband Syst. (IWUWBS)" }
+@STRING{CU_IZS            = "Int. Zurich Seminar Commun." }
+
+
+%Conferences added by georg
+@STRING{CU_OFC              = "Optical Fiber Commun. Conf. (OFC)"}
+@STRING{C_OFC               = "Proc. " # CU_OFC}
+@STRING{C_CISS               = "Proc. " # CU_CISS}
+@STRING{CU_ECOC              = "Eur. Conf. Optical Commun. (ECOC)"}
+@STRING{C_ECOC               = "Proc. " # CU_ECOC}
+@STRING{CU_CWIT              = "Canadian Workshop Inf. Theory (CWIT)"}
+@STRING{C_CWIT               = "Proc. " # CU_CWIT}
+
+@STRING{CU_SCC            = "Int. ITG Conf. Source Channel Coding (SCC)" }
+@STRING{CU_SCC2            = "Int. ITG Conf. Syst. Commun. Coding (SCC)" }
+@STRING{CU_DCC            = "Data Compression Conf. (DCC)" }
+@STRING{CU_ICSPCS         = "Int. Conf. Signal Process. Commun. Syst. (ICSPCS)" }
+
+@STRING{IEEE_CU_ESSCIRC   = "IEEE Eur. Solid-State Circuits Conf. (ESSCIRC)" })
+@STRING{IEEE_CU_GLOBECOM  = "IEEE Global Telecommun. Conf. (GLOBECOM" }
+@STRING{IEEE_CU_ICASSP    = "IEEE Int. Conf. Acoust., Speech, Signal Process. (ICASSP)" }
+@STRING{IEEE_CU_ICC       = "IEEE Int. Conf. Commun. (ICC)" }
+@STRING{IEEE_CU_ICECS     = "IEEE Int. Conf. Electron., Circuits, Syst. (ICECS)" }
+@STRING{IEEE_CU_ISCAS     = "IEEE Int. Symp. Circuits and Syst. (ISCAS)" }
+@STRING{IEEE_CU_ISIT      = "IEEE Int. Symp. Inf. Theory (ISIT)" }
+@STRING{IEEE_CU_ISSCC     = "IEEE Int. Solid-State Circuits Conf. (ISSCC)" }
+@STRING{IEEE_CU_ISSTA     = "IEEE Int. Symp. Spread Spectrum Tech. Applicat. (ISSTA)" }
+@STRING{IEEE_CU_ITW       = "IEEE Inf. Theory Workshop (ITW)" }
+@STRING{IEEE_CU_MILCOM    = "IEEE Mil. Commun. Conf. (MILCOM)" }
+@STRING{IEEE_CU_PIMRC     = "IEEE Int. Symp. Personal, Indoor, Mobile Radio
+Commun. (PIMRC)" }
+@STRING{IEEE_CU_RAWCON    = "IEEE Radio Wireless Conf. (RAWCON)" }
+@STRING{IEEE_CU_SPAWC     = "IEEE Int. Workshop Signal Process. Advances Wireless Commun. (SPAWC)" }
+@STRING{IEEE_CU_UWBST     = "IEEE Conf. Ultra Wideband Syst. Technol. (UWBST)" }
+
+% conferences added by Daniel Bielefeld
+@STRING{IEEE_CU_ISWCS     = "IEEE Int. Symp. Wireless Commun. Syst. (ISWCS)" }
+@STRING{IEEE_CU_ICUWB     = "IEEE Int. Conf. Ultra-Wideband (ICUWB)" }
+@STRING{IEEE_CU_SAM       = "IEEE Sensor Array and Multich. Signal Process. Workshop (SAM)" }
+@STRING{IEEE_CU_CCECE     = "IEEE Can. Conf. Electrical Comp. Eng. (CCECE)" }
+@STRING{IEEE_CU_IWCLD     = "IEEE Int. Workshop Cross Layer Design (IWCLD)" }
+@STRING{IEEE_CU_PERCOM    = "IEEE Int. Conf. Pervasive Comput. and Commun. (PerCom)" }
+@STRING{IEEE_CU_BMSB      = "IEEE Int. Symp. Broadband Multim. Syst. Broadc. (BMSB)"}
+@STRING{IEEE_CU_WOWMOM    = "IEEE Int. Symp. World Wirel. Mobile Multim. (WoWMoM)"}
+@STRING{IEEE_CU_SECON     = "IEEE Commun. Soc. Sensor Ad Hoc Commun. Netw. (SECON)"}
+@STRING{IEEE_CU_INFOCOM   = "IEEE Conf. IEEE Comput. Commun. Soc. (INFOCOM)"}
+
+% note that VTC turned biannual in 1999. Use IEEE_C(U)_VTC only before 1999.
+@STRING{IEEE_CU_VTC       = "IEEE Veh. Technol. Conf. (VTC)" }
+@STRING{IEEE_CU_VTC_F     = "IEEE Veh. Technol. Conf. Fall (VTC-Fall)" }
+@STRING{IEEE_CU_VTC_S     = "IEEE Veh. Technol. Conf. Spring (VTC-Spring)" }
+
+@STRING{IEEE_CU_WCNC      = "IEEE Wireless Commun. Netw. Conf. (WCNC)" }
+
+
+% Conferences (published)
+@STRING{C_ALLERTON        = "Proc. "  # CU_ALLERTON }
+@STRING{C_ASILOMAR        = "Proc. "  # CU_ASILOMAR }
+@STRING{C_EUSIPCO         = "Proc. "  # CU_EUSIPCO }
+@STRING{C_ICU             = "Proc. "  # CU_ICU }
+@STRING{C_ISITA           = "Proc. "  # CU_ISITA }
+@STRING{C_IWUWBS          = "Proc. "  # CU_IWUWBS }
+@STRING{C_IZS             = "Proc. "  # CU_IZS }
+@STRING{C_ICSPCS          = "Proc. "  # CU_ICSPCS }
+
+% Conferences added by georg
+@STRING{ACM_C_MSWIM      = "Proc. Int. Workshop on Modeling Analysis Simul. Wireless Mobile Syst. (MSWiM)"}
+@STRING{ACM_C_MOBICOM    = "Proc. Int. Conf. on Mobile Comput. Netw. (MOBICOM)"}
+@STRING{ACM_C_SIGCOMM	 = "Proc. SIGCOMM"}
+@STRING{C_WPNC           = "Proc. Workshop on Positioning, Navig. Commun. (WPNC)"}
+@STRING{C_ISCTA          = "Proc. Int. Symp. Commun. Applicat. (ISCTA)"}
+@STRING{C_IEEE_SCVT      = "Proc. IEEE Symp. Commun. Veh. Technol. Benelux"}
+@STRING{IEEE_C_ITWITWN       = "Proc. IEEE Inf. Theory Workshop Inf. Theory Wireless Netw." }
+@STRING{C_SCC            = "Proc. "  # CU_SCC }
+@STRING{C_DCC            = "Proc. "  # CU_DCC }
+@STRING{C_SCC2            = "Proc. "  # CU_SCC2}
+
+
+
+
+@STRING{IEEE_C_ESSCIRC    = "Proc. "  # IEEE_CU_ESSCIRC }
+@STRING{IEEE_C_GLOBECOM   = "Proc. "  # IEEE_CU_GLOBECOM }
+@STRING{IEEE_C_ICASSP     = "Proc. "  # IEEE_CU_ICASSP }
+@STRING{IEEE_C_ICC        = "Proc. "  # IEEE_CU_ICC }
+@STRING{IEEE_C_ICECS      = "Proc. "  # IEEE_CU_ICECS }
+@STRING{IEEE_C_ISCAS      = "Proc. "  # IEEE_CU_ISCAS }
+@STRING{IEEE_C_ISIT       = "Proc. "  # IEEE_CU_ISIT }
+@STRING{IEEE_C_ISSCC      = IEEE_CU_ISSCC # "  Dig. Tech. Papers"}
+@STRING{IEEE_C_ISSTA      = "Proc. "  # IEEE_CU_ISSTA }
+@STRING{IEEE_C_ITW        = "Proc. "  # IEEE_CU_ITW }
+@STRING{IEEE_C_MILCOM     = "Proc. "  # IEEE_CU_MILCOM }
+@STRING{IEEE_C_PIMRC      = "Proc. "  # IEEE_CU_PIMRC }
+@STRING{IEEE_C_RAWCON     = "Proc. "  # IEEE_CU_RAWCON }
+@STRING{IEEE_C_SPAWC      = "Proc. "  # IEEE_CU_SPAWC }
+@STRING{IEEE_C_UWBST      = IEEE_CU_UWBST # "  Dig. Tech. Papers"}
+@STRING{IEEE_C_VTC        = "Proc. "  # IEEE_CU_VTC }
+@STRING{IEEE_C_VTC_F      = "Proc. "  # IEEE_CU_VTC_F }
+@STRING{IEEE_C_VTC_S      = "Proc. "  # IEEE_CU_VTC_S }
+@STRING{IEEE_C_WCNC       = "Proc. "  # IEEE_CU_WCNC }
+@STRING{IEEE_C_ISWCS      = "Proc. "  # IEEE_CU_ISWCS }
+@STRING{IEEE_C_SAM        = "Proc. "  # IEEE_CU_SAM }
+@STRING{IEEE_C_ICUWB      = "Proc. "  # IEEE_CU_ICUWB }
+@STRING{IEEE_C_CCECE      = "Proc. "  # IEEE_CU_CCECE }
+@STRING{IEEE_C_IWCLD      = "Proc. "  # IEEE_CU_IWCLD }
+@STRING{IEEE_C_PERCOM     = "Proc. "  # IEEE_CU_PERCOM }
+@STRING{IEEE_C_BMSB       = "Proc. "  # IEEE_CU_BMSB }
+@STRING{IEEE_C_WOWMOM     = "Proc. "  # IEEE_CU_WOWMOM }
+@STRING{IEEE_C_SECON      = "Proc. "  # IEEE_CU_SECON }
+@STRING{IEEE_C_INFOCOM    = "Proc. "  # IEEE_CU_INFOCOM }
+
+The rules for abbreviation are as follows:
+
+- not absolutely necessary prepositions and particles are omitted.
+- the following abbreviations are applied:
+
+                            "Symposium" => "Symp.",
+                            "Conference" => "Conf.",
+                            "Tran?tion" => "Trans.",
+                            "Problem" => "Probl.",
+                            "Magazine" => "Mag.",
+                            "Journal" => "J.",
+                            "Proceedings" => "Proc.",
+                            "Letters" => "Lett.",
+                            "International" => "Int.",
+                            "Annual" => "Ann.",
+                            "Association" => "Assoc.",
+                            "Department" => "Dept.",
+                            "Society" => "Soc.",
+                            "University" => "Univ.",
+                            "European" => "Eur.",
+
+                            "Applied" => "Appl.",
+                            "Applications" => "Applicat.",
+                            "Network" => "Netw.",
+                            "Networking" => "Netw.",
+                            "Programming" => "Program.",
+                            "Institute" => "Inst.",
+                            "Mathematic" => "Math.",
+                            "Mathematical" => "Math.",
+                            "National" => "Natl.",
+                            "Review" => "Rev.",
+                            "Government" => "Govt.",
+                            "Federal" => "Fed.",
+                            "Engineering" => "Eng.",
+                            "American" => "Am.",
+                            "Communication" => "Commun.",
+                            "Telecommunication" => "Telecommun.",
+                            "Information" => "Inf.",
+                            "Processing" => "Process.",
+                            "Technology" => "Technol.",
+                            "System" => "Syst.",
+                            "Vehicular" => "Veh.",
+                            "Acoustic" => "Acoust.",
+                            "Control" => "Contr.",
+                            "Automatic" => "Automat.",
+                            "Computing" => "Comput.",
+                            "Computation" => "Comp.",
+                            "Computer" => "Comput.",
+                            "Techniques" => "Tech.",
+                            "Technical" => "Tech.",
+                            "Electronic" => "Electron.",
+                            "Propagation" => "Propagat.",
+
