@@ -65,7 +65,7 @@ Figure ~\ref{fig:5g_txfec_chain} represents the complete polar FEC chain for PBC
 	\label{fig:subblockInterleaver}
 \end{figure}
 
-\section{Data packing and Unpacking operations} \label{dataPackUnpack}
+\section{Data Packing and Unpacking Operations} \label{dataPackUnpack}
 Typically in software implementations, for clarity and ease implementation each bit of information is represented with 32-bit or 64-bit integers. Due to the presence of only one bit of information in each integer, if 1024 bits need to be encoded or decoded then 1024 integers are involved in encoding or decoding process. However, this isn't the case in hardware implementations since each bit can be processed in hardware description languages (HDL). Representing one bit of information using a 32 or 64-bit integer has the following disadvantages.
 
 \begin{description}[font=$\bullet$~\normalfont]
@@ -104,7 +104,7 @@ inline int8_t packBits<8>(int8_t s[]) {
 
 Listing \ref{code:packUnpackExample} shows an example of bit packing. It receives vector of size 8, containing 8-bit integers each representing a bit. Returns a one bit-packed one 8-bit integer.
 
-\section{CRC calculation}
+\section{CRC Calculation}
 %Explain why CRC attachment is considered in whole FEC chain, how it is useful for decoding polar codes. Explain algorithmic complexity of CRC calculation, How much time it was taking, How the optimization is carried out to reduce the CRC calculation time.
 In the polar FEC chain as shown in the Figure \ref{fig:5g_txfec_chain}, an L-bit CRC is calculated for $A$ information bits and attached to the message. The number of CRC bits (L) varies for different physical channels. In the downlink, for the payload of PBCH/PDCCH, 24-bit CRC is used. The Uplink Control Information (UCI) uses a 6-bit or 11-bit CRC based on the value of $A$. For $12 \leq A \leq 19$ and $A \geq 20$ 6-bit CRC and 11-bit CRC are used respectively. The polynomials for different CRC values are shown below \cite{3gpp.38.212}.
 
@@ -143,7 +143,7 @@ Polar code construction is the process of identifying information and frozen bit
 The 5G standard has adopted five different polar code block-lengths. Block-length sizes $\mathcal{N}$ are by $\mathcal{N} = \{32,64,128,256,512,1024\}$.
 For each of the block lengths, reliability indices values are specified in \cite{3gpp.38.212}. The polar code construction also depends on the rate matching mode since it affects the reliability of bit indices. The polar code construction is straightforward when rate matching output $E$ greater than or equal to block-length $N$. In such a case, code construction involves selection of $K$ most reliable indices for information bits remaining positions are frozen since bit reliability not affected by rate matching. Example  \ref{E_greaterThan_N} shows such a case. However when rate matching output size $E$ is smaller than block-length $N$ the selection of reliability indices becomes more involved which is described briefly in the next paragraph.
 
-\subsubsection*{Polar code construction example for $N = 32, K = 16$ and $E = N$} \label{E_greaterThan_N}
+\subsubsection*{Polar Code Construction Example for $N = 32, K = 16$ and $E = N$} \label{E_greaterThan_N}
 Let's take an example with $N = 32$ channel reliability values are extracted from the reliability table provided in \cite{3gpp.38.212} and are given by
 
 \begin{eqnarray*}
@@ -368,13 +368,13 @@ inline void bitMultG512(uint8_t *s, uint8_t *dEncoded)
 \end{table}
 
 
-\section{Sub-block interleaver}
+\section{Sub-block Interleaver}
 Subblock interleaver divides the block of $N$ bits into $32$ subblocks, each containing $\frac{N}{32}$ bits. These subblocks are interleaved as shown in Figure \ref{fig:subblockInterleaver}. Functionally, subblock interleaving is implemented with algorithm presented in \cite{3gpp.38.212}. Computation complexity of interleaving indexes is huge due to the use of multiplication, division and modulus operations. For a subblock interleaver block, minor optimizations such as avoiding expensive operations such as multiplication/division/modulus and replacing them with right or left shift operations are performed.
 
-\section{Rate matching}
+\section{Rate Matching}
 Rate matching block calculates $E$ bits out of $N$ bits. Value of $E$ relative to $N$ determines the mode of rate matching. There can be three modes namely repetition, shortening and puncturing. For the scenarios where $E \geq N$ repetition is applied otherwise either puncturing or shortening needs to be done. Through empirical measurements, it is found that for high rates shortening performs better and puncturing for low rates. Rate matching is performed by a circular buffer as given in \cite{DesignOfPolarCodes5G}. Major optimization in rate matching block is avoiding copy operations instead change the pointers for cases shortening/puncturing and repetition. Minor optimizations include using compiler primitives as hints to reduce the branchings and copying data blockwise instead of element-wise for repetition mode of rate matching. Blockwise copying is efficient since it can employ SIMD instructions and also it avoids usage of modulus operation in repetition mode.
 
-\section{Channel interleaver}
+\section{Channel Interleaver}
 The 5G standard specifies channel interleaver for higher order modulations for better error correction performance \cite{3gpp.TSG-RAN_WG1}. In the downlink, PBCH/PDCCH use only QPSK, hence channel interleaving is disabled using a parameter $I\_BIL$. Setting it to zero disables the channel interleaver. For uplink channels such as PUCCH/PUSCH, higher modulations can be used. In those scenarios, channel interleaving is enabled. This work focuses mainly on PDCCH/PBCH channels so interleaving block contribution to latency is zero since it is disabled. There are no optimizations performed for this block in the FEC chain.
 
 \section{Miscellaneous optimizations}

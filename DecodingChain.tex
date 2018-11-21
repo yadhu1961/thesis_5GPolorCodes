@@ -144,7 +144,7 @@ void VnOp(int16_t alphaR[],int16_t demodLLRs[],int8_t betaL[]) {
 \end{code}
 If the CN operation needs to perform on the received vector, the naive method would be to access each value from the vector and perform the same CN operation. Sequentially performing CN and VN operations is very inefficient. Size of the vector received at each node is always a power of 2. Due to this fact, CN and VN operations naturally fit vector processing units provided in the modern processors. In this work, both CN and VN operations are efficiently implemented using SSE and AVX instruction extensions provided by AMD EPYC platform. During CN and VN operations memory access is regular therefore data required in the future can be fetched to cache from main memory to reduce cache misses. Listing \ref{code:CnOperartion} and \ref{code:VnOperartion} show the efficient vectorized CN and VN operations. Bit combination operation is an XOR operation decoded bits from child nodes. Bit combination is again implemented using SIMD vector XOR operations.
 
-\subsection{Identifying component codes}
+\subsection{Identifying Component Codes}
 %How different kind of sub code types are identified efficiently using with bit packed frozen bits.
 The naive SC algorithm is purely sequential, hence decoder introduces significant latency in the FEC chain. With improvements such as \cite{fastSSC} and \cite{SSC} decoding, the tree can be pruned by identifying particular patterns in frozen bit positions. Pruning of a tree allows decoding of multiple bits in parallel. Component codes out of polar codes can be identified. These codes allow decoding without traversing the full decoder tree. Authors in \cite{SSC} and \cite{fastSSC} identify four such codes namely rate-0, rate-1, repetition and single parity codes. Decoding a codeword through component codes improves latency without compromising the error correction performance. However, to fully enjoy the fruits of decoding tree pruning, the implementation should be able to identify component codes efficiently. One simple functional way is to go through all frozen bits and search by comparing with predefined patterns. The naive way of searching for a pattern introduces significant latency in the decoding process. Processors with \textit{AVX} and \textit{AVX2} support contain registers which can store 256/128 bits in a single register. Frozen pattern array/vector contain either one or zero, one indicating a frozen bit and zero an information bit. Since one bit is enough to represent the type of bit position, frozen pattern can be stored by packing multiple bits type information to single 256bit register. Bit packing allows identifying a pattern by comparing with an integer vector using single SIMD instruction. For example, a mother code size $N=256$ information about which position is frozen and which is not is stored in a single 256 bit SIMD register in a bit packed format. To check whether it is a rate-0, rate-1, SPC or RPC requires one SIMD comparison instruction. The snippet in listing ~\ref{code:rateZeroSIMDComparison} illustrates an example of identifying node type in bit packed frozen bits pattern.
 \begin{code}
@@ -163,10 +163,10 @@ inline int identify_R0<256>(uint64_t s[]) {
 \end{minted}
 \end{code}
 
-\subsection{Decoding Rate-0 code}
+\subsection{Decoding Rate-0 Code}
 The R0 code is a special kind of node in a decoding tree in which all the descendants represent frozen bit positions, in other words, the corresponding node's frozen pattern contains all ones. One such example is given in the background chapter. For such a node, we know that all the bits are frozen hence decoder can immediately decode values as zero. All the decoded bits corresponding to such a node are set to zero. Rate-0 node allows the decoder to avoid performing VN and CN operations at the subsequent child nodes in addition to decoding multiple bits simultaneously.
 
-\subsection{Decoding Rate-1 code}
+\subsection{Decoding Rate-1 Code}
 A node is considered as an R1 node if all of its descendants in a decoder tree are information bits. In other words, the Rate one node contains no frozen bits. Decoding of Rate-1 nodes is performed without traversing till the end of a decoder. This avoids a significant number of VN and CN operation and function calls. However, decoding Rate-1 node is not as straightforward as Rate-0 node. Decoding is performed through threshold detection of all the LLRs and performing the polar transform on the result to obtain decoded bits.
 
 \IncMargin{1.5em}
@@ -186,8 +186,8 @@ A node is considered as an R1 node if all of its descendants in a decoder tree a
 \end{algorithm}
 \DecMargin{1.5em}
 
-Although R1 nodes avoid CN and VN operations, decoding is not parallel. The decoder needs to go through each of the LLRs to decode the bits and finally perform the polar transform. Both steps are costly operations. To improve the latency through data parallelism, threshold detection can make use of SIMD instructions. Threshold detection of a complete vector can be performed through single SIMD comparison instruction. This improves the parallelism factor to sixteen for 16-bit LLRs with {AVX2} instructions. The code snippet in listing ~\ref{code:rateOneNodeDecoding} presents an example where rate-1 node decoding is implemented using AVX instructions. Resulting parallelism factor is eight.
-
+Although R1 nodes avoid CN and VN operations, decoding is not parallel. The decoder needs to go through each of the LLRs to decode the bits and finally perform the polar transform. Both steps are costly operations. To improve the latency through data parallelism, threshold detection can make use of SIMD instructions. Threshold detection of a complete vector can be performed through single SIMD comparison instruction. This improves the parallelism factor to sixteen for 16-bit LLRs with {AVX2} instructions. The code snippet in listing ~\ref{code:rateOneNodeDecoding} presents an example where rate-1 node decoding is implemented using AVX instructions. Resulting parallelism factor is eight. \newline
+  \\
 \begin{code}
 	\captionof{listing}{Decoding rate-1 subcode}
 	\label{code:rateOneNodeDecoding}
@@ -212,7 +212,7 @@ void decR_1(int16_t demodLLRs[],int8_t beta[],int8_t decodedBits[]) {
 
 Next step in decoding rate-1 node is performing polar transform operation. It is equivalent to performing polar encoding. As explained in the previous chapter, the binary tree represents the encoding process. Efficient polar transform implementation makes use of the same optimizations techniques employed in encoding such as SIMD vectorization and lookup table techniques.
 
-\subsection{Decoding an RPC code}
+\subsection{Decoding an RPC Code}
 Repetition code (RPC) is another type of component identified from polar code. It also allows decoding multiple bits without full tree traversal. A node is considered as RPC when only one of its rightmost descendent contains information and all remaining bits are frozen. A bit packed frozen pattern allows easy identification of RPC node. If frozen pattern at the node is equal to one then it is an RPC node. RPC node decoding is similar to simple repetition code decoding. Bit decoded by summing all LLR values and doing threshold detection of the result.  The result of threshold detection is stored at information bit position and remaining bits at the node are set to zero.
 
 \begin{equation*}
@@ -231,7 +231,7 @@ Repetition code (RPC) is another type of component identified from polar code. I
 
 Again, the RPC-node decoding process has room for improvement. Decoding requires summing of all LLRs. Summation operation efficiently performed with SIMD instructions through data parallelism instead of adding individual values. Figure \ref{fig:SIMDAddition} illustrates how blockwise addition is performed using SIMD instructions. This vectorization has a significant gain when the sum of huge LLR vector is required.
 
-\subsection{Decoding an SPC code}
+\subsection{Decoding an SPC Code}
 Another type of constituent codes identified from decoding tree are single parity check (SPC) codes. SPC codes can also be decoded more efficiently without complete tree traversal. These nodes have a code rate $Nv-1/Nv$. SPC nodes have only one frozen bit at the right most position remaining ones are information bits. Optimal ML decoding of SPC codes is performed with very low complexity. Similar to R1 code decoding SPC code requires threshold detection for all the LLRs. To achieve this efficiently same optimization of Rate-1 to employ threshold detection for whole vector is reused. For SPC decoding two more additional steps are required namely finding position of minimum magnitude LLR and calculating the parity of decoded bits. If the parity of decoded bits is not even then bit value at the position of lowest magnitude LLR is flipped. Final step in the decoding is to obtain final decoded bits values through polar transform. The steps described above are shown in the algorithm ~\ref{algo:spcDecoding}.
 
 \IncMargin{1.5em}
@@ -262,7 +262,7 @@ Another type of constituent codes identified from decoding tree are single parit
 
 SPC code uses the same two operations (threshold detection and polar transform) as used in RPC decoding. This allows reusing of the same optimization techniques. Two additional operations in SPC decoding are finding the position of minimum magnitude LLR and calculating the parity. The time complexity of finding a minimum magnitude LLR position is $\mathcal{O}\big(N\big)$. It can be reduced to $\mathcal{O}\big(N/8\big)$ by mapping search operation to SIMD instruction which processes vectors of size eight in parallel. SSE4.1 instruction $\mathtt{phminposu}$ comes to rescue. It processes vectors of size 128 bits, computes the minimum amongst the packed unsigned 16-bit vectors returns the position and its value. Parity calculation of the decoded bits also requires iterating through all bits obtained after threshold detection. To efficiently perform parity check calculation decoded bits are packed into a single integer. The number of set bits in an integer is obtained by the hardware instruction $\mathtt{popcnt}$. If the number of set bits is odd then a bit in the lowest magnitude LLR position is flipped. These optimizations reduced the latency of SPC decoding to less than $50\%$ of naive algorithmic implementation shown in ~\ref{algo:spcDecoding}.
 
-\subsection{Partial unrolling of decoder}
+\subsection{Partial Unrolling of the Decoder}
 Recursive formulation of decoder makes it easy to implement decoding algorithm using dynamic programming. It also allows the reuse of hardware resources in FPGA/ASIC. Successive cancellation decoding algorithm for polar codes is formulated recursive form. However, this formulation has a huge disadvantage when it comes to software implementations. Every recursive function call in software requires new stack frame allocation and jump to a starting address of the function. Both operations are expensive in terms of processor cycles. Authors in ~\cite{fastPolarDecodersAlgoImpl} propose complete unrolling of the decoder, hence avoiding recursive function calls and branch instructions. With complete unrolling, number special nodes and their level in decoder tree are known at compile time due to the fixed frozen bit position. In polar FEC chain of 5G, a full unrolling of the decoder is not possible due to varying block-length and code rate requirements. Different code rate requirement makes it impossible to know frozen bit positions during compile time. Therefore it is necessary to dynamically identify the presence of special nodes in the decoder tree. In this work, partial decoding unrolling is done, i.e recursive function calls are completely avoided. Template concept of C++ language is used for auto unrolling of functions. However, branches are still present to check for the presence of special nodes in a tree. Partial unrolling also reduced the decoding latency considerably.
 
 \begin{figure}[]
@@ -272,7 +272,7 @@ Recursive formulation of decoder makes it easy to implement decoding algorithm u
 	\label{fig:unrolledDecoder}
 \end{figure}
 
-\subsection{Cache prefetching}
+\subsection{Cache Prefetching}
 A significant performance bottleneck in the modern processors is the access to memory. As presented in Chapter \ref{chap:Background}, Usage of caches reduces the number of accesses to main memory. However, due to the limited cache size, it might happen that the requested data is not present in the cache. The absence of data in cache results in an event called cache-miss. In this case, data is requested from main memory. Copying data from main memory to cache has a huge overhead.  The cache-miss overhead can be reduced by dealing with less memory allocation. In other words, we should reuse the memory as much as possible. Some of the modern processors provide special nonblocking instructions which allow cache line prefetching. If the memory access required is known in advance, the prefetching instruction can be executed well in advance by software before accessing memory. These instructions if used efficiently can hide the memory access latency. In this work, decoder implementation is optimized for AMD EPYC platform, which provides cache prefetching instructions through $ \mathtt{3dnow} $ extensions. Due to regular memory access in the polar decoder, prefetching instructions are used whenever possible to hide memory access latency.
 
 \subsection {Eliminating Superfluous Operations on $\beta$-Values}
@@ -356,7 +356,7 @@ After extracting parity bits, the codeword of mother code with a block-length $N
 \section{CRC calculation}
 For UCI, the 5G standard specifies different CRC sizes depending on the number of information bits($A$). As specified in \cite{3gpp.38.212}, if $ A \ge 20$ $ CRC11 $  otherwise $ CRC6 $ is calculated.  For CRC calculation algorithm \cite{Sarwate:1988:CCR:63030.63037} is used. It is adapted to calculate CRC blockwise for the blocks of size 8-bits with the help of prebuilt lookup tables for $ CRC11 $ and $ CRC6 $. Unlike PDCCH/PBCH CRC implementation, for CRC6 and CRC11 is a generic logic is implemented. Type of CRC is decided at runtime based on the value of $A$ and it is calculated with the same generic logic.
 
-\section{Decoding FEC chain latency results}
+\section{Decoding FEC Chain Latency Results}
 
 $I_{IL} = 0, n_{max} = 10, n_{pc} = 3 ,n_{pc}^{wm} = 1, I_{BIL} = 1, E = 1692, K = 512$.
 \begin{table}[!h]
